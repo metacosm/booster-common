@@ -50,7 +50,7 @@ else
     exit 1
 fi
 
-echo -e "${BLUE}Updating booster.yaml${NC}"
+echo -e "${BLUE}Updating ${YELLOW}booster.yaml${NC}"
 sed -i '' -e 's/1.5.7/1.5.8/g' .openshiftio/booster.yaml
 git commit -am "Updating booster.yaml to 1.5.8"
 
@@ -58,7 +58,7 @@ echo -e "${BLUE}Moving templates from ${PREVIOUS_VERSION} version to ${NEW_VERSI
 for FILE in `find . -name "application.yaml"`
 do
     # curl -s "https://raw.githubusercontent.com/openshiftio/launchpad-templates/master/scripts/create-launch-templates.sh" | bash
-    echo -e "${BLUE}Updating ${FILE} template to this new version ${PREVIOUS_VERSION} => ${NEW_VERSION} ${NC}"
+    echo -e "${BLUE}Updating ${YELLOW}${FILE}${BLUE} template to ${YELLOW}${NEW_VERSION}${BLUE} version${NC}"
     sed -i '' -e "s/:${PREVIOUS_VERSION}/:${NEW_VERSION}/g" $FILE
     sed -i '' -e "s/version: \"${PREVIOUS_VERSION}/version: \"${NEW_VERSION}/g" $FILE
     sed -i '' -e "s/var-version=${PREVIOUS_VERSION}/var-version=${NEW_VERSION}/g" $FILE
