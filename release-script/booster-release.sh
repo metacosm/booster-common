@@ -37,9 +37,11 @@ then
     SNAPSHOT=${PART[2]}
     if [[ "$SNAPSHOT" == SNAPSHOT ]]
     then
+        PREVIOUS_VERSION="$(($NEW_VERSION_INT -1))-${QUALIFIER}"
         NEW_VERSION="${NEW_VERSION_INT}-${QUALIFIER}"
         NEXT_VERSION="$(($NEW_VERSION_INT +1))-${QUALIFIER}-SNAPSHOT"
     else
+        PREVIOUS_VERSION="$(($NEW_VERSION_INT -1))"
         NEW_VERSION="${NEW_VERSION_INT}"
         NEXT_VERSION="$(($NEW_VERSION_INT +1))-SNAPSHOT"
     fi
@@ -48,8 +50,35 @@ else
     exit 1
 fi
 
+echo -e "${BLUE}Updating booster.yaml${NC}"
+sed -i '' -e 's/1.5.7/1.5.8/g' .openshiftio/booster.yaml
+git commit -am "Updating booster.yaml to 1.5.8"
+
+echo -e "${BLUE}Moving templates from ${PREVIOUS_VERSION} version to ${NEW_VERSION} ${NC}"
+for FILE in `find . -name "application.yaml"`
+do
+    # curl -s "https://raw.githubusercontent.com/openshiftio/launchpad-templates/master/scripts/create-launch-templates.sh" | bash
+    echo -e "${BLUE}Updating ${FILE} template to this new version ${PREVIOUS_VERSION} => ${NEW_VERSION} ${NC}"
+    sed -i '' -e "s/:${PREVIOUS_VERSION}/:${NEW_VERSION}/g" $FILE
+    sed -i '' -e "s/version: \"${PREVIOUS_VERSION}/version: \"${NEW_VERSION}/g" $FILE
+    sed -i '' -e "s/var-version=${PREVIOUS_VERSION}/var-version=${NEW_VERSION}/g" $FILE
+    if [[ "$GIT_BRANCH" == redhat ]]
+    then
+        sed -i '' -e "s/value: master/value: redhat/g" $FILE
+    fi
+done
+
+idea .
+
+echo -e "${BLUE}Committing changes${NC}"
+git commit -am "Updating templates to ${NEW_VERSION}"
+
 echo -e "${BLUE}Updating project version to: ${YELLOW} ${NEW_VERSION} ${NC}"
 mvn versions:set -DnewVersion=${NEW_VERSION} > bump-version.log
+
+echo -e "${BLUE}Press a key to continue when you're done checking the templates or ctrl-c to abort.${NC}"
+echo -e "${BLUE}If you abort, you can get back to starting status by calling: git reset --hard ${GIT_REMOTE}/${GIT_BRANCH}.${NC}"
+read foo
 
 echo -e "${BLUE}Issuing a verification build${NC}"
 mvn clean verify > verification.log
