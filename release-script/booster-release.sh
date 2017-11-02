@@ -1,6 +1,13 @@
 #!/bin/bash
 set -e
 
+##
+# TODO:
+#  - parameterize Spring Boot version to use in booster.yaml
+#  - update booster-catalog with versions as we go
+#  - better error handling
+
+
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 YELLOW='\033[0;33m'
