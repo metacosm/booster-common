@@ -70,15 +70,15 @@ done
 
 idea .
 
+echo -e "${BLUE}Press a key to continue when you're done checking the templates or ctrl-c to abort.${NC}"
+echo -e "${BLUE}If you abort, you can get back to starting status by calling: ${YELLOW}git reset --hard ${GIT_REMOTE}/${GIT_BRANCH}.${NC}"
+read foo
+
 echo -e "${BLUE}Committing changes${NC}"
 git commit -am "Updating templates to ${NEW_VERSION}"
 
 echo -e "${BLUE}Updating project version to: ${YELLOW} ${NEW_VERSION} ${NC}"
 mvn versions:set -DnewVersion=${NEW_VERSION} > bump-version.log
-
-echo -e "${BLUE}Press a key to continue when you're done checking the templates or ctrl-c to abort.${NC}"
-echo -e "${BLUE}If you abort, you can get back to starting status by calling: git reset --hard ${GIT_REMOTE}/${GIT_BRANCH}.${NC}"
-read foo
 
 echo -e "${BLUE}Issuing a verification build${NC}"
 mvn clean verify > verification.log
