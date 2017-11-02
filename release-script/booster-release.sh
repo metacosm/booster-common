@@ -81,14 +81,20 @@ do
     fi
 done
 
+# Open the current booster in Idea to double check
 idea .
 
 echo -e "${BLUE}Press a key to continue when you're done checking the templates or ctrl-c to abort.${NC}"
 echo -e "${BLUE}If you abort, you can get back to starting status by calling: ${YELLOW}git reset --hard ${GIT_REMOTE}/${GIT_BRANCH}.${NC}"
 read foo
 
-echo -e "${BLUE}Committing changes${NC}"
-git commit -am "Updating templates to ${NEW_VERSION}"
+# Only attempt committing if we have changes otherwise the script will exit
+if ! git diff-index --quiet HEAD --
+then
+    echo -e "${BLUE}Committing changes${NC}"
+    git commit -am "Updating templates to ${NEW_VERSION}"
+fi
+
 
 echo -e "${BLUE}Updating project version to: ${YELLOW} ${NEW_VERSION} ${NC}"
 mvn versions:set -DnewVersion=${NEW_VERSION} > bump-version.log
