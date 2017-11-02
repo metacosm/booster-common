@@ -8,14 +8,18 @@ BLUE='\033[0;34m'
 
 for BOOSTER in `ls -d spring-boot-*-booster`
 do
-    pushd $BOOSTER
-    for BRANCH in {redhat,sb-1.5.x}
-    do
-        if [ -e "$1" ]; then
-            echo -e "${BLUE}Running ${YELLOW}${1}${BLUE} script on ${YELLOW}${BRANCH}${BLUE} of ${YELLOW}${BOOSTER}.${NC}"
-            git fetch upstream && git co $BRANCH && git rebase upstream/$BRANCH
-            source $1
-        fi
-    done
-    popd
+    #if [ "$BOOSTER" != spring-boot-circuit-breaker-booster ] && [ "$BOOSTER" != spring-boot-configmap-booster ] && [ "$BOOSTER" != spring-boot-crud-booster ]
+    if true ;
+    then
+        pushd $BOOSTER
+        for BRANCH in {redhat,sb-1.5.x}
+        do
+            if [ -e "$1" ]; then
+                echo -e "${BLUE}Running ${YELLOW}${1}${BLUE} script on ${YELLOW}${BRANCH}${BLUE} of ${YELLOW}${BOOSTER}.${NC}"
+                git fetch upstream && git co $BRANCH && git rebase upstream/$BRANCH
+                source $1
+            fi
+        done
+        popd
+    fi
 done
