@@ -3,9 +3,10 @@ set -e
 
 ##
 # TODO:
-#  - parameterize Spring Boot version to use in booster.yaml
+#  - parameterize Spring Boot version to use in booster.yaml via script param
 #  - update booster-catalog with versions as we go
 #  - better error handling
+#  - automate booster catalog update
 
 
 RED='\033[0;31m'
@@ -57,15 +58,18 @@ else
     exit 1
 fi
 
-sed -i '' -e 's/1.5.7/1.5.8/g' .openshiftio/booster.yaml
-if git diff-index --quiet HEAD --
-then
-    echo -e "${BLUE}There was no changes to ${YELLOW}booster.yaml${BLUE}. Please check!${NC}"
-    exit 1
-else
-    echo -e "${BLUE}Updating ${YELLOW}booster.yaml${NC}"
-    git commit -am "Updating booster.yaml to 1.5.8"
-fi
+# TODO: update booster.yaml if needed
+#if [ -e "$1" ]; then
+#    sed -i '' -e 's/name: \d.\d.\d./name: ${1}./g' .openshiftio/booster.yaml
+#    if git diff-index --quiet HEAD --
+#    then
+#        echo -e "${BLUE}There was no changes to ${YELLOW}booster.yaml${BLUE}. Please check!${NC}"
+#        exit 1
+#    else
+#        echo -e "${BLUE}Updating ${YELLOW}booster.yaml${NC}"
+#        git commit -am "Updating booster.yaml to 1.5.8"
+#    fi
+#fi
 
 echo -e "${BLUE}Moving templates from ${PREVIOUS_VERSION} version to ${NEW_VERSION} ${NC}"
 for FILE in `find . -name "application.yaml"`
