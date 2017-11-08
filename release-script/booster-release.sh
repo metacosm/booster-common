@@ -79,10 +79,8 @@ do
     sed -i '' -e "s/:${PREVIOUS_VERSION}/:${NEW_VERSION}/g" $FILE
     sed -i '' -e "s/version: \"${PREVIOUS_VERSION}/version: \"${NEW_VERSION}/g" $FILE
     sed -i '' -e "s/var-version=${PREVIOUS_VERSION}/var-version=${NEW_VERSION}/g" $FILE
-    if [[ "$GIT_BRANCH" == redhat ]]
-    then
-        sed -i '' -e "s/value: master/value: redhat/g" $FILE
-    fi
+    sed -i '' -e "s/value: sb-1.5.x/value: master/g" $FILE
+    sed -i '' -e "s/value: redhat/value: master/g" $FILE
 done
 
 # Open the current booster in Idea to double check
