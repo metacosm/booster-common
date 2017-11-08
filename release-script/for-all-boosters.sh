@@ -6,6 +6,11 @@ NC='\033[0m' # No Color
 YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
 
+CURRENT_DIR=`pwd`
+CATALOG_FILE=$CURRENT_DIR"/booster-catalog-versions.txt"
+rm "$CATALOG_FILE"
+touch "$CATALOG_FILE"
+
 for BOOSTER in `ls -d spring-boot-*-booster`
 do
     #if [ "$BOOSTER" != spring-boot-circuit-breaker-booster ] && [ "$BOOSTER" != spring-boot-configmap-booster ] && [ "$BOOSTER" != spring-boot-crud-booster ]
