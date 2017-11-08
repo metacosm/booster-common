@@ -19,6 +19,14 @@ if ((`git status -sb | wc -l` != 1)); then
     exit 1
 fi
 
+if [ -z "$CATALOG_FILE" ]; then
+    CATALOG_FILE=/dev/null
+fi
+
+if [ -z "$BOOSTER" ]; then
+    BOOSTER=$(basename `pwd`)
+fi
+
 # check that we have proper git information to automatically commit and push
 # git status -sb has the following format: ## master...upstream/master when tracking a remote branch
 GIT_STATUS=`git status -sb`
@@ -119,6 +127,9 @@ git commit -am "Bumping version to ${NEXT_VERSION}"
 
 echo -e "${BLUE}Pushing changes to ${YELLOW}${GIT_BRANCH}${BLUE} branch of ${YELLOW}${GIT_REMOTE}${BLUE} remote${NC}"
 git push $GIT_REMOTE $GIT_BRANCH --tags
+
+echo -e "${BLUE}Appending new version ${YELLOW}${NEW_VERSION}${BLUE} for ${YELLOW}${GIT_BRANCH}${BLUE} branch to ${YELLOW}${CATALOG_FILE}${NC}"
+echo "${BOOSTER}: ${GIT_BRANCH} => ${NEW_VERSION}" >> "$CATALOG_FILE"
 
 echo -e "DONE !"
 rm *.log
