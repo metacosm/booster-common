@@ -6,7 +6,12 @@ set -e
 #  - parameterize Spring Boot version to use in booster.yaml via script param
 #  - update booster-catalog with versions as we go
 #  - better error handling
-#  - automate booster catalog update
+#  - automate booster catalog update:
+#       - introduce map between booster git name and path in booster catalog
+#           see: https://stackoverflow.com/questions/1494178/how-to-define-hash-tables-in-bash
+#       - need to locate local booster-catalog copy
+#       - update YAML files
+#       - leave commit and push to remote as a manual step?
 
 
 RED='\033[0;31m'
