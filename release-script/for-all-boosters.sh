@@ -17,7 +17,7 @@ do
     if true ;
     then
         pushd $BOOSTER
-        for BRANCH in {redhat,sb-1.5.x}
+        for BRANCH in {redhat,master}
         do
             if [ -e "$1" ]; then
                 echo -e "${BLUE}Running ${YELLOW}${1}${BLUE} script on ${YELLOW}${BRANCH}${BLUE} of ${YELLOW}${BOOSTER}.${NC}"
