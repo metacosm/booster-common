@@ -19,10 +19,13 @@ do
         pushd $BOOSTER
         for BRANCH in {redhat,master}
         do
+            git fetch upstream && git co $BRANCH && git rebase upstream/$BRANCH
             if [ -e "$1" ]; then
                 echo -e "${BLUE}Running ${YELLOW}${1}${BLUE} script on ${YELLOW}${BRANCH}${BLUE} of ${YELLOW}${BOOSTER}.${NC}"
-                git fetch upstream && git co $BRANCH && git rebase upstream/$BRANCH
                 source $1
+            else
+                echo -e "${BLUE}No script was provided or ${YELLOW}${1}${BLUE} doesn't exist in ${YELLOW}`pwd`${BLUE} directory.${NC}"
+                echo -e "${BLUE}Only refreshed local code.${NC}"
             fi
         done
         popd
