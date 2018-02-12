@@ -17,7 +17,7 @@ else
   fi
 
 #  If changes are needed in the pom of the new branch, e.g. to change the version of the booster parent… ;)
-#  sed -i '' -e "s/<version>3</<version>1.5.0.Beta2</g" pom.xml
+#  sed -i '' -e "s/<version>1.5.10.Beta2</<version>1.5.10-2</g" pom.xml
   
   echo -e "${BLUE}Created branch ${YELLOW}${BRANCH}${BLUE} and pushed it to remote ${YELLOW}upstream${BLUE} of ${YELLOW}${BOOSTER}${BLUE}.${NC}"
   git push upstream ${BRANCH}
