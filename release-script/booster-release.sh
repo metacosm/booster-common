@@ -107,7 +107,7 @@ echo -e "${BLUE}If you abort, you can get back to starting status by calling: ${
 read foo
 
 # Only attempt committing if we have changes otherwise the script will exit
-if ! git diff-index --quiet HEAD --
+if [[ `git status --porcelain` ]]
 then
     echo -e "${BLUE}Committing changes${NC}"
     git commit -am "Updating templates to ${NEW_VERSION}"
