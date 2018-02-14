@@ -34,5 +34,6 @@ do
             fi
         done
         popd >/dev/null
+        echo -e "${BLUE}==> Processing ${YELLOW}${BRANCH}${BLUE} branch of ${YELLOW}${BOOSTER}${BLUE} finished.${NC}"
     fi
 done
