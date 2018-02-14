@@ -21,6 +21,10 @@ do
         do
             # assumes "official" remote is named 'upstream'
             git fetch upstream >/dev/null && git co $BRANCH >/dev/null && git rebase upstream/$BRANCH >/dev/null
+
+            # if we need to replace a multi-line match in the pom file of each booster, for example:
+            # perl -pi -e 'undef $/; s/<properties>\s*<\/properties>/replacement/' pom.xml
+
             if [ -e "$1" ]; then
                 echo -e "${BLUE}Running ${YELLOW}${1}${BLUE} script on ${YELLOW}${BRANCH}${BLUE} branch of ${YELLOW}${BOOSTER}.${NC}"
                 source $1
