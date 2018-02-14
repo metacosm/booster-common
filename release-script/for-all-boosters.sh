@@ -16,11 +16,11 @@ do
     #if [ "$BOOSTER" != spring-boot-circuit-breaker-booster ] && [ "$BOOSTER" != spring-boot-configmap-booster ] && [ "$BOOSTER" != spring-boot-crud-booster ]
     if true ;
     then
-        pushd $BOOSTER
+        pushd $BOOSTER >/dev/null
         for BRANCH in {redhat,master}
         do
             # assumes "official" remote is named 'upstream'
-            git fetch upstream && git co $BRANCH && git rebase upstream/$BRANCH
+            git fetch upstream >/dev/null && git co $BRANCH >/dev/null && git rebase upstream/$BRANCH >/dev/null
             if [ -e "$1" ]; then
                 echo -e "${BLUE}Running ${YELLOW}${1}${BLUE} script on ${YELLOW}${BRANCH}${BLUE} branch of ${YELLOW}${BOOSTER}.${NC}"
                 source $1
@@ -29,6 +29,6 @@ do
                 echo -e "${BLUE}Only refreshed local code.${NC}"
             fi
         done
-        popd
+        popd >/dev/null
     fi
 done
