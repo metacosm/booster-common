@@ -16,6 +16,9 @@ version_int=${parts[1]}
 qualifier=${parts[2]}
 snapshot=${parts[3]}
 
+# to output parts:
+# echo "${parts[@]}"
+
 given_version=$2
 
 # todo: use getopts instead
