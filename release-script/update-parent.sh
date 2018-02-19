@@ -31,7 +31,12 @@ else
     then
         NEW_VERSION="${sb_version}-$(($version_int +1))-${qualifier}-${snapshot}"
     else
-        NEW_VERSION="${sb_version}-$(($version_int +1))"
+        if [ -n "${qualifier}" ]
+        then
+            NEW_VERSION="${sb_version}-$(($version_int +1))-${qualifier}"
+        else
+            NEW_VERSION="${sb_version}-$(($version_int +1))"
+        fi
     fi
 fi
 
