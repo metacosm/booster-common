@@ -8,6 +8,9 @@ BLUE='\033[0;34m'
 
 # DANGER: THIS SCRIPT WILL AUTOMATICALLY MODIFY PARENT AND PUSH MODIFICATIONS IF NO ARGUMENT IS PROVIDED. USE WITH CARE!
 
+# run evaluate once first to avoid downloading artifacts interfering with expected results
+mvn help:evaluate -Dexpression=project.parent.version >/dev/null
+
 # Retrieve current parent version
 PARENT_VERSION=`mvn help:evaluate -Dexpression=project.parent.version | grep -e '^[^\[]'`
 parts=(${PARENT_VERSION//-/ })
