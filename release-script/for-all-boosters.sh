@@ -12,6 +12,9 @@ CATALOG_FILE=$CURRENT_DIR"/booster-catalog-versions.txt"
 rm "$CATALOG_FILE"
 touch "$CATALOG_FILE"
 
+log () {
+    echo -e "\t${GREEN}${BRANCH}${BLUE}: ${1}${NC}"
+}
 for BOOSTER in `ls -d spring-boot-*-booster`
 do
     #if [ "$BOOSTER" != spring-boot-circuit-breaker-booster ] && [ "$BOOSTER" != spring-boot-configmap-booster ] && [ "$BOOSTER" != spring-boot-crud-booster ]
@@ -28,7 +31,7 @@ do
 
             # check if branch exists, otherwise skip booster
             if ! git show-ref --verify --quiet refs/heads/${BRANCH}; then
-                echo -e "\t${GREEN}${BRANCH}${BLUE}: ${RED}Branch doesn't exist. Skipping.${NC}"
+                log "${RED}Branch doesn't exist. Skipping."
             else
                 git co -q ${BRANCH} >/dev/null && git rebase upstream/${BRANCH} >/dev/null
 
@@ -36,10 +39,10 @@ do
                 # perl -pi -e 'undef $/; s/<properties>\s*<\/properties>/replacement/' pom.xml
 
                 if [ -e "$1" ]; then
-                    echo -e "\t${GREEN}${BRANCH}${BLUE}: Running ${YELLOW}${1}${BLUE} script.${NC}"
+                    log "Running ${YELLOW}${1}${BLUE} script"
                     source $1
                 else
-                    echo -e "\t${GREEN}${BRANCH}${BLUE}: No script provided. Only refreshed code.${NC}"
+                    log "No script provided. Only refreshed code."
                 fi
             fi
         done
