@@ -93,7 +93,14 @@ change_version () {
                     rm build.log
 
                     log "Committing and pushing"
-                    git ci -am "SB-521: Update version to ${newVersion}"
+
+                    if [ -n "$2" ]; then
+                        jira=${2}": "
+                    else
+                        jira=""
+                    fi
+
+                    git ci -am ${jira}"Update version to ${newVersion}"
                     git push upstream ${BRANCH}
                 else
                     log "Build ${RED}failed${BLUE}! Check build.log file."
