@@ -12,6 +12,15 @@ CATALOG_FILE=$CURRENT_DIR"/booster-catalog-versions.txt"
 rm "$CATALOG_FILE"
 touch "$CATALOG_FILE"
 
+evaluate_mvn_expr() {
+    # run evaluate once first to avoid downloading artifacts interfering with expected results, expression should fail fast
+    mvn help:evaluate -Dexpression=a >/dev/null
+
+    # Retrieve current parent version
+    result=`mvn help:evaluate -Dexpression=${1} | grep -e '^[^\[]'`
+    echo $result
+}
+
 log () {
     echo -e "\t${GREEN}${BRANCH}${BLUE}: ${1}${NC}"
 }
