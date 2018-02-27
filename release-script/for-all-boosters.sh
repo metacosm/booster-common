@@ -138,7 +138,8 @@ do
                 # perl -pi -e 'undef $/; s/<properties>\s*<\/properties>/replacement/' pom.xml
 
                 if [ -e "$1" ]; then
-                    log "Running ${YELLOW}${1}${BLUE} script"
+                    script=$1
+                    log "Running ${YELLOW}${script}${BLUE} script"
                     source $1
                 else
                     log "No script provided. Only refreshed code."
