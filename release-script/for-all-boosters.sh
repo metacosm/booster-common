@@ -24,6 +24,96 @@ evaluate_mvn_expr() {
 log () {
     echo -e "\t${GREEN}${BRANCH}${BLUE}: ${1}${NC}"
 }
+
+update_parent () {
+    # Retrieve current parent version
+    PARENT_VERSION=$(evaluate_mvn_expr "project.parent.version")
+    parts=(${PARENT_VERSION//-/ })
+    sb_version=${parts[0]}
+    version_int=${parts[1]}
+    qualifier=${parts[2]}
+    snapshot=${parts[3]}
+
+    # to output parts:
+    # echo "${parts[@]}"
+
+    given_version=$1
+
+    # todo: use getopts instead
+    # arguments from parent are passed to this script so $2 corresponds to the first param *after* the name of this script
+    if [ -n "$given_version" ]; then
+        log "Current parent (${YELLOW}${PARENT_VERSION}${BLUE}) will be replaced by version: ${YELLOW}${given_version}"
+        NEW_VERSION=${given_version}
+    else
+        if [[ "$snapshot" == SNAPSHOT ]]
+        then
+            NEW_VERSION="${sb_version}-$(($version_int +1))-${qualifier}-${snapshot}"
+        else
+            if [ -n "${qualifier}" ]
+            then
+                NEW_VERSION="${sb_version}-$(($version_int +1))-${qualifier}"
+            else
+                NEW_VERSION="${sb_version}-$(($version_int +1))"
+            fi
+        fi
+    fi
+
+    log "Updating parent from ${YELLOW}${PARENT_VERSION}${BLUE} to ${YELLOW}${NEW_VERSION}"
+
+    sed -i '' -e "s/<version>${PARENT_VERSION}</<version>${NEW_VERSION}</g" pom.xml
+
+    # Only attempt committing if we have changes otherwise the script will exit
+    if [[ `git status --porcelain` ]]; then
+
+        log "Running verification build"
+        if mvn clean verify >build.log; then
+            log "Build ${YELLOW}OK"
+            rm build.log
+
+            log "Committing and pushing"
+            git add pom.xml
+            git ci -m "Update to parent ${NEW_VERSION}"
+            git push upstream ${BRANCH}
+        else
+            log "Build ${RED}failed${BLUE}! Check build.log file."
+            log "You will need to reset the branch or explicitly set the parent before running this script again."
+        fi
+
+    else
+        log "Parent was already at ${YELLOW}${NEW_VERSION}${BLUE}. Ignoring."
+    fi
+}
+
+change_version () {
+    if [ -n "$1" ]; then
+        newVersion=$1
+        if mvn versions:set -DnewVersion=${newVersion} >/dev/null; then
+            if [[ `git status --porcelain` ]]; then
+                log "Changed version to ${YELLOW}${newVersion}"
+                log "Running verification build"
+                if mvn clean verify >build.log; then
+                    log "Build ${YELLOW}OK"
+                    rm build.log
+
+                    log "Committing and pushing"
+                    git ci -am "SB-521: Update version to ${newVersion}"
+                    git push upstream ${BRANCH}
+                else
+                    log "Build ${RED}failed${BLUE}! Check build.log file."
+                    log "You will need to reset the branch or explicitly set the parent before running this script again."
+                fi
+
+            else
+                log "Version was already at ${YELLOW}${newVersion}${BLUE}. Ignoring."
+            fi
+
+            find . -name "*.versionsBackup" -delete
+        else
+            log "${RED}Couldn't set version. Reverting to upstream version."
+            git reset --hard upstream/${BRANCH}
+        fi
+    fi
+}
 for BOOSTER in `ls -d spring-boot-*-booster`
 do
     #if [ "$BOOSTER" != spring-boot-circuit-breaker-booster ] && [ "$BOOSTER" != spring-boot-configmap-booster ] && [ "$BOOSTER" != spring-boot-crud-booster ]
