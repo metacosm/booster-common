@@ -13,11 +13,8 @@ rm "$CATALOG_FILE"
 touch "$CATALOG_FILE"
 
 evaluate_mvn_expr() {
-    # run evaluate once first to avoid downloading artifacts interfering with expected results, expression should fail fast
-    mvn help:evaluate -Dexpression=a >/dev/null
-
-    # Retrieve current parent version
-    result=`mvn help:evaluate -Dexpression=${1} | grep -e '^[^\[]'`
+    # Evaluate the given maven expression, cf: https://stackoverflow.com/questions/3545292/how-to-get-maven-project-version-to-the-bash-command-line
+    result=`mvn -q -Dexec.executable="echo" -Dexec.args='${'${1}'}' --non-recursive exec:exec`
     echo $result
 }
 
