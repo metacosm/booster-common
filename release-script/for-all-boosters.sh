@@ -98,8 +98,6 @@ change_version() {
         cmd="sed -i '' -e 's/<version>${currentVersion}</<version>${newVersion}</g' pom.xml"
     fi
 
-    log "${expr} ${target} ${cmd}"
-
     if eval ${cmd}; then
         # Only attempt committing if we have changes otherwise the script will exit
         if [[ `git status --porcelain` ]]; then
@@ -133,6 +131,8 @@ change_version() {
         log_failed "Couldn't set version. Reverting to upstream version."
         git reset --hard upstream/${BRANCH}
     fi
+
+    echo $newVersion
 }
 
 create_branch() {
