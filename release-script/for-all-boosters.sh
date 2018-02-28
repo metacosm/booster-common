@@ -23,12 +23,8 @@ evaluate_mvn_expr() {
 }
 
 log() {
-    currentBranch=${2:-$BRANCH}
+    currentBranch=${branch:-$BRANCH}
     echo -e "\t${GREEN}${currentBranch}${BLUE}: ${1}${NC}"
-}
-
-log_branch() {
-    log ${1} ${branch}
 }
 
 update_parent() {
@@ -133,14 +129,16 @@ create_branch() {
 
     if git ls-remote --heads upstream ${branch} | grep ${branch} > /dev/null;
     then
-        log_branch "Branch already exists on remote ${YELLOW}upstream${BLUE}. Ignoring."
+        log "Branch already exists on remote ${YELLOW}upstream${BLUE}. Ignoring."
     else
         if ! git co -b ${branch} > /dev/null 2> /dev/null;
         then
-            log_branch "${RED}Couldn't create branch. Ignoring."
+            log "${RED}Couldn't create branch. Ignoring."
             return 1
         fi
     fi
+
+    unset branch # unset to avoid side-effects in log
 }
 
 delete_branch() {
@@ -148,19 +146,21 @@ delete_branch() {
 
     if git ls-remote --heads upstream ${branch} | grep ${branch} > /dev/null;
     then
-        log_branch "Are you sure you want to delete ${YELLOW}${branch}${BLUE} branch on remote ${YELLOW}upstream${BLUE}?"
-        log_branch "Press any key to continue or ctrl-c to abort."
+        log "Are you sure you want to delete ${YELLOW}${branch}${BLUE} branch on remote ${YELLOW}upstream${BLUE}?"
+        log "Press any key to continue or ctrl-c to abort."
         read foo
 
         git push -d upstream ${branch}
     else
-        log_branch "Branch doesn't exist on remote. ${RED}Ignoring."
+        log "Branch doesn't exist on remote. ${RED}Ignoring."
     fi
 
     if ! git branch -D ${branch} > /dev/null 2> /dev/null;
     then
-        log_branch "Branch doesn't exist locally. ${RED}Ignoring."
+        log "Branch doesn't exist locally. ${RED}Ignoring."
     fi
+
+    unset branch # unset to avoid side-effects in log
 }
 
 for BOOSTER in `ls -d spring-boot-*-booster`
