@@ -125,6 +125,41 @@ change_version() {
     fi
 }
 
+create_branch() {
+    branch=$1
+
+    if git ls-remote --heads upstream ${branch} | grep ${branch} > /dev/null;
+    then
+        log_branch "Branch already exists on remote ${YELLOW}upstream${BLUE}. Ignoring."
+    else
+        if ! git co -b ${branch} > /dev/null 2> /dev/null;
+        then
+            log_branch "${RED}Couldn't create branch. Ignoring."
+            return 1
+        fi
+    fi
+}
+
+delete_branch() {
+    branch=$1
+
+    if git ls-remote --heads upstream ${branch} | grep ${branch} > /dev/null;
+    then
+        log_branch "Are you sure you want to delete ${YELLOW}${branch}${BLUE} branch on remote ${YELLOW}upstream${BLUE}?"
+        log_branch "Press any key to continue or ctrl-c to abort."
+        read foo
+
+        git push -d upstream ${branch}
+    else
+        log_branch "Branch doesn't exist on remote. ${RED}Ignoring."
+    fi
+
+    if ! git branch -D ${branch} > /dev/null 2> /dev/null;
+    then
+        log_branch "Branch doesn't exist locally. ${RED}Ignoring."
+    fi
+}
+
 declare -a failed=( )
 for BOOSTER in `ls -d spring-boot-*-booster`
 do
