@@ -148,6 +148,9 @@ do
                 # if we need to replace a multi-line match in the pom file of each booster, for example:
                 # perl -pi -e 'undef $/; s/<properties>\s*<\/properties>/replacement/' pom.xml
 
+                # if we need to execute sed on the result of find:
+                # find . -name "application.yaml" -exec sed -i '' -e "s/provider: fabric8/provider: snowdrop/g" {} +
+
                 if [ -e "$1" ]; then
                     script=$1
                     log "Running ${YELLOW}${script}${BLUE} script"
