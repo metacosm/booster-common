@@ -18,8 +18,13 @@ evaluate_mvn_expr() {
     echo $result
 }
 
-log () {
-    echo -e "\t${GREEN}${BRANCH}${BLUE}: ${1}${NC}"
+log() {
+    currentBranch=${2:-$BRANCH}
+    echo -e "\t${GREEN}${currentBranch}${BLUE}: ${1}${NC}"
+}
+
+log_branch() {
+    log ${1} ${branch}
 }
 
 update_parent () {
