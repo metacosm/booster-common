@@ -7,6 +7,7 @@ NC='\033[0m' # No Color
 YELLOW='\033[0;33m'
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
+MAGENTA='\033[0;35m'
 
 CURRENT_DIR=`pwd`
 CATALOG_FILE=$CURRENT_DIR"/booster-catalog-versions.txt"
@@ -14,17 +15,33 @@ rm "$CATALOG_FILE"
 touch "$CATALOG_FILE"
 
 declare -a failed=( )
-
+declare -a ignored=( )
 
 evaluate_mvn_expr() {
     # Evaluate the given maven expression, cf: https://stackoverflow.com/questions/3545292/how-to-get-maven-project-version-to-the-bash-command-line
     result=`mvn -q -Dexec.executable="echo" -Dexec.args='${'${1}'}' --non-recursive exec:exec`
-    echo $result
+    echo ${result}
+}
+
+current_branch() {
+    currentBranch=${branch:-$BRANCH}
+    echo ${currentBranch}
 }
 
 log() {
-    currentBranch=${branch:-$BRANCH}
-    echo -e "\t${GREEN}${currentBranch}${BLUE}: ${1}${NC}"
+    echo -e "\t${GREEN}$(current_branch)${BLUE}: ${1}${NC}"
+}
+
+log_ignored() {
+   log "${MAGENTA}${1}${MAGENTA}. Ignoring."
+   ignoredItem="$(current_branch):${BOOSTER}"
+   ignored+=( ${ignoredItem} )
+}
+
+log_failed() {
+   log "${RED}ERROR: ${1}${RED}"
+   ignoredItem="$(current_branch):${BOOSTER}"
+   ignored+=( ${ignoredItem} )
 }
 
 update_parent() {
@@ -77,12 +94,12 @@ update_parent() {
             git ci -m "Update to parent ${NEW_VERSION}"
             git push upstream ${BRANCH}
         else
-            log "Build ${RED}failed${BLUE}! Check build.log file."
+            log_failed "Build failed! Check ${YELLOW}build.log"
             log "You will need to reset the branch or explicitly set the parent before running this script again."
         fi
 
     else
-        log "Parent was already at ${YELLOW}${NEW_VERSION}${BLUE}. Ignoring."
+        log_ignored "Parent was already at ${YELLOW}${NEW_VERSION}"
     fi
 }
 
@@ -108,17 +125,17 @@ change_version() {
                     git ci -am ${jira}"Update version to ${newVersion}"
                     git push upstream ${BRANCH}
                 else
-                    log "Build ${RED}failed${BLUE}! Check build.log file."
+                    log_failed "Build failed! Check ${YELLOW}build.log"
                     log "You will need to reset the branch or explicitly set the parent before running this script again."
                 fi
 
             else
-                log "Version was already at ${YELLOW}${newVersion}${BLUE}. Ignoring."
+                log_ignored "Version was already at ${YELLOW}${newVersion}"
             fi
 
             find . -name "*.versionsBackup" -delete
         else
-            log "${RED}Couldn't set version. Reverting to upstream version."
+            log_failed "Couldn't set version. Reverting to upstream version."
             git reset --hard upstream/${BRANCH}
         fi
     fi
@@ -129,11 +146,11 @@ create_branch() {
 
     if git ls-remote --heads upstream ${branch} | grep ${branch} > /dev/null;
     then
-        log "Branch already exists on remote ${YELLOW}upstream${BLUE}. Ignoring."
+        log_ignored "Branch already exists on remote"
     else
         if ! git co -b ${branch} > /dev/null 2> /dev/null;
         then
-            log "${RED}Couldn't create branch. Ignoring."
+            log_failed "Couldn't create branch"
             return 1
         fi
     fi
@@ -152,12 +169,12 @@ delete_branch() {
 
         git push -d upstream ${branch}
     else
-        log "Branch doesn't exist on remote. ${RED}Ignoring."
+        log_ignored "Branch doesn't exist on remote"
     fi
 
     if ! git branch -D ${branch} > /dev/null 2> /dev/null;
     then
-        log "Branch doesn't exist locally. ${RED}Ignoring."
+        log_ignored "Branch doesn't exist locally"
     fi
 
     unset branch # unset to avoid side-effects in log
@@ -175,13 +192,13 @@ do
         do
             # check if branch exists, otherwise skip booster
             if ! git show-ref --verify --quiet refs/heads/${BRANCH}; then
-                log "${RED}Branch doesn't exist. Skipping."
+                log_ignored "Branch does not exist"
                 continue
             fi
 
             # if booster has uncommitted changes, skip it
             if [[ `git status --porcelain` ]]; then
-                log "You have uncommitted changes, please stash these changes. ${RED}Ignoring."
+                log_ignored "You have uncommitted changes, please stash these changes"
                 continue
             fi
 
@@ -200,8 +217,7 @@ do
                 script=$1
                 log "Running ${YELLOW}${script}${BLUE} script"
                 if ! source $1; then
-                    log "${RED}Error running script"
-                    failed+=( ${BOOSTER} )
+                    log_failed "Error running script"
                 fi
             else
                 log "No script provided. Only refreshed code."
@@ -214,5 +230,11 @@ do
 done
 
 if [ ${#failed[@]} != 0 ]; then
-    echo -e "${RED}The following boosters were in error: ${YELLOW}"$(IFS=,; echo "${failed[*]}")
+    echo -e "${BLUE}The following boosters failed:${RED}"
+    printf '\t%s\n' "${failed[@]}"
+fi
+
+if [ ${#ignored[@]} != 0 ]; then
+    echo -e "${BLUE}The following boosters were skipped:${MAGENTA}"
+    printf '\t%s\n' "${ignored[@]}"
 fi
