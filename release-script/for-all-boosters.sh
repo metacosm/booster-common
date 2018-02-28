@@ -134,7 +134,7 @@ do
 
         echo -e "${BLUE}> ${YELLOW}${BOOSTER}${BLUE}${NC}"
 
-        for BRANCH in redhat master
+        for BRANCH in "master" "redhat"
         do
             # assumes "official" remote is named 'upstream'
             git fetch upstream > /dev/null
