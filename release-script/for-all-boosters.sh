@@ -172,7 +172,7 @@ do
         for BRANCH in "master" "redhat"
         do
             # assumes "official" remote is named 'upstream'
-            git fetch upstream > /dev/null
+            git fetch -q upstream > /dev/null
 
             # check if branch exists, otherwise skip booster
             if ! git show-ref --verify --quiet refs/heads/${BRANCH}; then
