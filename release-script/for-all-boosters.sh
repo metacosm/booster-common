@@ -1,4 +1,5 @@
 #!/bin/bash
+
 set -e
 
 RED='\033[0;31m'
@@ -27,10 +28,10 @@ log_branch() {
     log ${1} ${branch}
 }
 
-update_parent () {
+update_parent() {
     # Retrieve current parent version
     PARENT_VERSION=$(evaluate_mvn_expr "project.parent.version")
-    parts=(${PARENT_VERSION//-/ })
+    parts=( ${PARENT_VERSION//-/ } )
     sb_version=${parts[0]}
     version_int=${parts[1]}
     qualifier=${parts[2]}
@@ -68,7 +69,7 @@ update_parent () {
     if [[ `git status --porcelain` ]]; then
 
         log "Running verification build"
-        if mvn clean verify >build.log; then
+        if mvn clean verify > build.log; then
             log "Build ${YELLOW}OK"
             rm build.log
 
@@ -86,14 +87,14 @@ update_parent () {
     fi
 }
 
-change_version () {
+change_version() {
     if [ -n "$1" ]; then
         newVersion=$1
-        if mvn versions:set -DnewVersion=${newVersion} >/dev/null; then
+        if mvn versions:set -DnewVersion=${newVersion} > /dev/null; then
             if [[ `git status --porcelain` ]]; then
                 log "Changed version to ${YELLOW}${newVersion}"
                 log "Running verification build"
-                if mvn clean verify >build.log; then
+                if mvn clean verify > build.log; then
                     log "Build ${YELLOW}OK"
                     rm build.log
 
@@ -128,22 +129,21 @@ declare -a failed=( )
 for BOOSTER in `ls -d spring-boot-*-booster`
 do
     #if [ "$BOOSTER" != spring-boot-circuit-breaker-booster ] && [ "$BOOSTER" != spring-boot-configmap-booster ] && [ "$BOOSTER" != spring-boot-crud-booster ]
-    if true ;
-    then
-        pushd $BOOSTER >/dev/null
+    if true; then
+        pushd ${BOOSTER} > /dev/null
 
         echo -e "${BLUE}> ${YELLOW}${BOOSTER}${BLUE}${NC}"
 
         for BRANCH in redhat master
         do
             # assumes "official" remote is named 'upstream'
-            git fetch upstream >/dev/null
+            git fetch upstream > /dev/null
 
             # check if branch exists, otherwise skip booster
             if ! git show-ref --verify --quiet refs/heads/${BRANCH}; then
                 log "${RED}Branch doesn't exist. Skipping."
             else
-                git co -q ${BRANCH} >/dev/null && git rebase upstream/${BRANCH} >/dev/null
+                git co -q ${BRANCH} > /dev/null && git rebase upstream/${BRANCH} > /dev/null
 
                 # if we need to replace a multi-line match in the pom file of each booster, for example:
                 # perl -pi -e 'undef $/; s/<properties>\s*<\/properties>/replacement/' pom.xml
@@ -157,12 +157,13 @@ do
                     fi
                 else
                     log "No script provided. Only refreshed code."
+
                 fi
             fi
         done
 
         echo -e "----------------------------------------------------------------------------------------\n"
-        popd >/dev/null
+        popd > /dev/null
     fi
 done
 
