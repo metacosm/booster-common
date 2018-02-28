@@ -123,6 +123,8 @@ change_version () {
         fi
     fi
 }
+
+declare -a failed=( )
 for BOOSTER in `ls -d spring-boot-*-booster`
 do
     #if [ "$BOOSTER" != spring-boot-circuit-breaker-booster ] && [ "$BOOSTER" != spring-boot-configmap-booster ] && [ "$BOOSTER" != spring-boot-crud-booster ]
@@ -149,7 +151,10 @@ do
                 if [ -e "$1" ]; then
                     script=$1
                     log "Running ${YELLOW}${script}${BLUE} script"
-                    source $1
+                    if ! source $1; then
+                        log "${RED}Error running script"
+                        failed+=( ${BOOSTER} )
+                    fi
                 else
                     log "No script provided. Only refreshed code."
                 fi
@@ -160,3 +165,7 @@ do
         popd >/dev/null
     fi
 done
+
+if [ ${#failed[@]} != 0 ]; then
+    echo -e "${RED}The following boosters were in error: ${YELLOW}"$(IFS=,; echo "${failed[*]}")
+fi
