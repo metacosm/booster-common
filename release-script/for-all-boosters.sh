@@ -196,6 +196,89 @@ delete_branch() {
     unset branch # unset to avoid side-effects in log
 }
 
+release() {
+    current_version=$(evaluate_mvn_expr 'project.version')
+
+    if [[ "${current_version}" != *-SNAPSHOT ]]; then
+        log_ignored "Cannot release a non-snapshot version"
+        return 1
+    fi
+
+    versionRE='([1-9].[0-9].[0-9]+)-([0-9]+)-?(rhoar|redhat)?-?(SNAPSHOT)?'
+    if [[ "${current_version}" =~ ${versionRE} ]]; then
+        sbVersion=${BASH_REMATCH[1]}
+        versionInt=${BASH_REMATCH[2]}
+        newVersionInt=$(($versionInt +1))
+        qualifier=${BASH_REMATCH[3]}
+        snapshot=${BASH_REMATCH[4]}
+
+        releaseVersion="${sbVersion}-${versionInt}"
+        if [[ -n "${qualifier}" ]]; then
+            releaseVersion="${releaseVersion}-${qualifier}"
+        fi
+
+        nextVersion="${sbVersion}-${newVersionInt}"
+        if [[ -n "${qualifier}" ]]; then
+            nextVersion="${nextVersion}-${qualifier}"
+        fi
+        nextVersion="${nextVersion}-SNAPSHOT"
+
+    fi
+
+    runtime=${1:-'1.2-7'}
+    
+    # replace template placeholders if they exist
+    templates=($(find . -name "application.yaml"))
+    if [ ${#templates[@]} != 0 ]; then
+        for file in ${templates[@]}
+        do
+            sed -i '' -e "s/RUNTIME_VERSION/${runtime}/g" ${file}
+            log "${YELLOW}${file}${BLUE}: Replaced RUNTIME_VERSION token by ${runtime}"
+
+            sed -i '' -e "s/BOOSTER_VERSION/${releaseVersion}/g" ${file}
+            log "${YELLOW}${file}${BLUE}: Replaced BOOSTER_VERSION token by ${releaseVersion}"
+        done
+        if [[ `git status --porcelain` ]]; then
+            log "Commit"
+            git commit -am "Replaced templates placeholders: RUNTIME_VERSION -> ${runtime}, BOOSTER_VERSION -> ${releaseVersion}"
+        else
+            # if no changes were made it means that templates don't contain tokens and should be fixed
+            log_ignored "Couldn't replace tokens in templates"
+            return 1
+        fi
+    fi
+
+    # switch off pushing since we'll do it at the end
+    PUSH='off'
+    change_version ${releaseVersion}
+
+    log "Creating tag ${YELLOW}${releaseVersion}"
+    git tag -a ${releaseVersion} -m "Releasing ${releaseVersion}" > /dev/null
+
+    if [ ${#templates[@]} != 0 ]; then
+        # restore template placeholders
+        for file in ${templates[@]}
+        do
+            sed -i '' -e "s/${runtime}/RUNTIME_VERSION/g" ${file}
+            log "${YELLOW}${file}${BLUE}: Restored RUNTIME_VERSION token"
+
+            sed -i '' -e "s/${releaseVersion}/BOOSTER_VERSION/g" ${file}
+            log "${YELLOW}${file}${BLUE}: Restored BOOSTER_VERSION token"
+        done
+        log "Commit"
+        git commit -q -am "Restored templates placeholders: ${runtime} -> RUNTIME_VERSION, ${releaseVersion} -> BOOSTER_VERSION"
+    fi
+
+    change_version ${nextVersion}
+
+    # switch pushing back on and push
+    PUSH='on'
+    push_to_remote "upstream" "--tags"
+
+    log "Appending new version ${YELLOW}${releaseVersion}${BLUE} to ${YELLOW}${CATALOG_FILE}"
+    echo "${BOOSTER}: ${BRANCH} => ${releaseVersion}" >> "$CATALOG_FILE"
+}
+
 for BOOSTER in `ls -d spring-boot-*-booster`
 do
     #if [ "$BOOSTER" != spring-boot-circuit-breaker-booster ] && [ "$BOOSTER" != spring-boot-configmap-booster ] && [ "$BOOSTER" != spring-boot-crud-booster ]
