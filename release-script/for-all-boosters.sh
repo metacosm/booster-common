@@ -13,6 +13,9 @@ CATALOG_FILE=$CURRENT_DIR"/booster-catalog-versions.txt"
 rm "$CATALOG_FILE"
 touch "$CATALOG_FILE"
 
+declare -a failed=( )
+
+
 evaluate_mvn_expr() {
     # Evaluate the given maven expression, cf: https://stackoverflow.com/questions/3545292/how-to-get-maven-project-version-to-the-bash-command-line
     result=`mvn -q -Dexec.executable="echo" -Dexec.args='${'${1}'}' --non-recursive exec:exec`
@@ -160,7 +163,6 @@ delete_branch() {
     fi
 }
 
-declare -a failed=( )
 for BOOSTER in `ls -d spring-boot-*-booster`
 do
     #if [ "$BOOSTER" != spring-boot-circuit-breaker-booster ] && [ "$BOOSTER" != spring-boot-configmap-booster ] && [ "$BOOSTER" != spring-boot-crud-booster ]
@@ -171,32 +173,38 @@ do
 
         for BRANCH in "master" "redhat"
         do
-            # assumes "official" remote is named 'upstream'
-            git fetch -q upstream > /dev/null
-
             # check if branch exists, otherwise skip booster
             if ! git show-ref --verify --quiet refs/heads/${BRANCH}; then
                 log "${RED}Branch doesn't exist. Skipping."
-            else
-                git co -q ${BRANCH} > /dev/null && git rebase upstream/${BRANCH} > /dev/null
+                continue
+            fi
 
-                # if we need to replace a multi-line match in the pom file of each booster, for example:
-                # perl -pi -e 'undef $/; s/<properties>\s*<\/properties>/replacement/' pom.xml
+            # if booster has uncommitted changes, skip it
+            if [[ `git status --porcelain` ]]; then
+                log "You have uncommitted changes, please stash these changes. ${RED}Ignoring."
+                continue
+            fi
 
-                # if we need to execute sed on the result of find:
-                # find . -name "application.yaml" -exec sed -i '' -e "s/provider: fabric8/provider: snowdrop/g" {} +
+            # assumes "official" remote is named 'upstream'
+            git fetch -q upstream > /dev/null
 
-                if [ -e "$1" ]; then
-                    script=$1
-                    log "Running ${YELLOW}${script}${BLUE} script"
-                    if ! source $1; then
-                        log "${RED}Error running script"
-                        failed+=( ${BOOSTER} )
-                    fi
-                else
-                    log "No script provided. Only refreshed code."
+            git co -q ${BRANCH} > /dev/null && git rebase upstream/${BRANCH} > /dev/null
 
+            # if we need to replace a multi-line match in the pom file of each booster, for example:
+            # perl -pi -e 'undef $/; s/<properties>\s*<\/properties>/replacement/' pom.xml
+
+            # if we need to execute sed on the result of find:
+            # find . -name "application.yaml" -exec sed -i '' -e "s/provider: fabric8/provider: snowdrop/g" {} +
+
+            if [ -e "$1" ]; then
+                script=$1
+                log "Running ${YELLOW}${script}${BLUE} script"
+                if ! source $1; then
+                    log "${RED}Error running script"
+                    failed+=( ${BOOSTER} )
                 fi
+            else
+                log "No script provided. Only refreshed code."
             fi
         done
 
