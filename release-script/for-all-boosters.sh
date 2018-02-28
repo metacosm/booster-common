@@ -14,7 +14,10 @@ CATALOG_FILE=$CURRENT_DIR"/booster-catalog-versions.txt"
 rm "$CATALOG_FILE"
 touch "$CATALOG_FILE"
 
+# failed boosters
 declare -a failed=( )
+
+# skipped boosters
 declare -a ignored=( )
 
 evaluate_mvn_expr() {
@@ -26,6 +29,7 @@ evaluate_mvn_expr() {
 current_branch() {
     currentBranch=${branch:-$BRANCH}
     echo ${currentBranch}
+    unset currentBranch
 }
 
 log() {
@@ -34,13 +38,13 @@ log() {
 
 log_ignored() {
    log "${MAGENTA}${1}${MAGENTA}. Ignoring."
-   ignoredItem="$(current_branch):${BOOSTER}"
+   ignoredItem="$(current_branch):${BOOSTER}:\"${1}\""
    ignored+=( ${ignoredItem} )
 }
 
 log_failed() {
    log "${RED}ERROR: ${1}${RED}"
-   ignoredItem="$(current_branch):${BOOSTER}"
+   ignoredItem="$(current_branch):${BOOSTER}:\"${1}\""
    ignored+=( ${ignoredItem} )
 }
 
@@ -225,10 +229,10 @@ done
 
 if [ ${#failed[@]} != 0 ]; then
     echo -e "${BLUE}The following boosters failed:${RED}"
-    printf '\t%s\n' "${failed[@]}"
+    printf '\t%s\n' "${failed[*]}" #todo: figure out how to output each on its own line
 fi
 
 if [ ${#ignored[@]} != 0 ]; then
     echo -e "${BLUE}The following boosters were skipped:${MAGENTA}"
-    printf '\t%s\n' "${ignored[@]}"
+    printf '\t%s\n' "${ignored[*]}" #todo: figure out how to output each on its own line
 fi
