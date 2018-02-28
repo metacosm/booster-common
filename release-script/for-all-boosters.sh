@@ -14,6 +14,9 @@ CATALOG_FILE=$CURRENT_DIR"/booster-catalog-versions.txt"
 rm "$CATALOG_FILE"
 touch "$CATALOG_FILE"
 
+# script-wide toggle controlling pushes from functions
+PUSH='on'
+
 # failed boosters
 declare -a failed=( )
 
@@ -47,6 +50,22 @@ log_failed() {
    ignoredItem="$(current_branch):${BOOSTER}:\"${1}\""
    ignored+=( ${ignoredItem} )
 }
+
+push_to_remote() {
+    currentBranch=${branch:-$BRANCH}
+    remote=${1:-upstream}
+    options=${2:-}
+
+    if [[ "$PUSH" == on ]]; then
+        if git push ${options} ${remote} ${currentBranch} > /dev/null; then
+            log "Pushed to ${remote}"
+        else
+            log_ignored "Failed to push to ${remote}"
+        fi
+    fi
+    unset currentBranch
+}
+
 
 compute_new_version() {
     version_expr=${1:-project.version}
@@ -111,16 +130,15 @@ change_version() {
                 log "Build ${YELLOW}OK"
                 rm build.log
 
-                log "Committing and pushing"
-
+                log "Commit"
                 if [ -n "$2" ]; then
                     jira=${2}": "
                 else
                     jira=""
                 fi
-
                 git ci -am ${jira}"Update ${target} version to ${newVersion}"
-                git push upstream ${BRANCH}
+
+                push_to_remote
             else
                 log_failed "Build failed! Check ${YELLOW}build.log"
                 log "You will need to reset the branch or explicitly set the parent before running this script again."
@@ -165,7 +183,7 @@ delete_branch() {
         log "Press any key to continue or ctrl-c to abort."
         read foo
 
-        git push -d upstream ${branch}
+        push_to_remote upstream -d
     else
         log_ignored "Branch doesn't exist on remote"
     fi
