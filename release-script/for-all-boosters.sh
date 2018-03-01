@@ -136,7 +136,7 @@ change_version() {
                 else
                     jira=""
                 fi
-                git ci -am ${jira}"Update ${target} version to ${newVersion}"
+                git commit -am ${jira}"Update ${target} version to ${newVersion}"
 
                 push_to_remote
             else
