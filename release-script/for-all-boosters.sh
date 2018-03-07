@@ -11,7 +11,7 @@ MAGENTA='\033[0;35m'
 
 CURRENT_DIR=`pwd`
 CATALOG_FILE=$CURRENT_DIR"/booster-catalog-versions.txt"
-rm "$CATALOG_FILE"
+rm -f "$CATALOG_FILE"
 touch "$CATALOG_FILE"
 
 # script-wide toggle controlling pushes from functions
@@ -279,7 +279,13 @@ release() {
     echo "${BOOSTER}: ${BRANCH} => ${releaseVersion}" >> "$CATALOG_FILE"
 }
 
-for BOOSTER in `ls -d spring-boot-*-booster`
+boosters=( $(find . -name "spring-boot-*-booster"))
+if [ ${#boosters[@]} == 0 ]; then
+    echo -e "${RED}No boosters named spring-boot-*-booster could be found in $(pwd)${NC}"
+    exit 1
+fi
+
+for BOOSTER in ${boosters[@]}
 do
     #if [ "$BOOSTER" != spring-boot-circuit-breaker-booster ] && [ "$BOOSTER" != spring-boot-configmap-booster ] && [ "$BOOSTER" != spring-boot-crud-booster ]
     if true; then
