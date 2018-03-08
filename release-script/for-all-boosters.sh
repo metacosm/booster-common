@@ -17,6 +17,9 @@ touch "$CATALOG_FILE"
 # script-wide toggle controlling pushes from functions
 PUSH='on'
 
+# script-wide toggle controlling commits from functions
+COMMIT='on'
+
 # failed boosters
 declare -a failed=( )
 
@@ -71,6 +74,12 @@ push_to_remote() {
     unset currentBranch
 }
 
+commit() {
+    if [[ "$COMMIT" == on ]]; then
+        log "Commit"
+        git commit -q -am "${1}"
+    fi
+}
 
 compute_new_version() {
     version_expr=${1:-project.version}
@@ -135,13 +144,12 @@ change_version() {
                 log "Build ${YELLOW}OK"
                 rm build.log
 
-                log "Commit"
                 if [ -n "$2" ]; then
                     jira=${2}": "
                 else
                     jira=""
                 fi
-                git commit -am ${jira}"Update ${target} version to ${newVersion}"
+                commit ${jira}"Update ${target} version to ${newVersion}"
 
                 push_to_remote
             else
@@ -244,8 +252,7 @@ release() {
             log "${YELLOW}${file}${BLUE}: Replaced BOOSTER_VERSION token by ${releaseVersion}"
         done
         if [[ `git status --porcelain` ]]; then
-            log "Commit"
-            git commit -am "Replaced templates placeholders: RUNTIME_VERSION -> ${runtime}, BOOSTER_VERSION -> ${releaseVersion}"
+            commit "Replaced templates placeholders: RUNTIME_VERSION -> ${runtime}, BOOSTER_VERSION -> ${releaseVersion}"
         else
             # if no changes were made it means that templates don't contain tokens and should be fixed
             log_ignored "Couldn't replace tokens in templates"
@@ -270,8 +277,7 @@ release() {
             sed -i '' -e "s/${releaseVersion}/BOOSTER_VERSION/g" ${file}
             log "${YELLOW}${file}${BLUE}: Restored BOOSTER_VERSION token"
         done
-        log "Commit"
-        git commit -q -am "Restored templates placeholders: ${runtime} -> RUNTIME_VERSION, ${releaseVersion} -> BOOSTER_VERSION"
+        commit "Restored templates placeholders: ${runtime} -> RUNTIME_VERSION, ${releaseVersion} -> BOOSTER_VERSION"
     fi
 
     change_version ${nextVersion}
