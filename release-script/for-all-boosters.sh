@@ -51,6 +51,11 @@ log_failed() {
    ignored+=( ${ignoredItem} )
 }
 
+error() {
+    echo -e "${RED}Error: ${1}${NC}"
+    exit ${2:-1}
+}
+
 push_to_remote() {
     currentBranch=${branch:-$BRANCH}
     remote=${1:-upstream}
