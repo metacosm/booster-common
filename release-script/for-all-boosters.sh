@@ -9,10 +9,32 @@ GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 MAGENTA='\033[0;35m'
 
-CURRENT_DIR=`pwd`
-CATALOG_FILE=$CURRENT_DIR"/booster-catalog-versions.txt"
-rm -f "$CATALOG_FILE"
-touch "$CATALOG_FILE"
+# create a temporary directory WORK_DIR to be removed at the exit of the script
+# see: https://stackoverflow.com/questions/4632028/how-to-create-a-temporary-directory
+# ====
+# the directory of the script
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# the temp directory used, within $DIR
+# omit the -p parameter to create a temporal directory in the default location
+WORK_DIR=`mktemp -d -p "$DIR"`
+
+# check if tmp dir was created
+if [[ ! "$WORK_DIR" || ! -d "$WORK_DIR" ]]; then
+    echo "Could not create temp dir"
+    exit 1
+fi
+
+# deletes the temp directory
+function cleanup {
+    rm -rf "$WORK_DIR"
+    echo "Deleted temp working directory $WORK_DIR"
+}
+
+# register the cleanup function to be called on the EXIT signal
+trap cleanup EXIT
+# ====
+
 
 # script-wide toggle controlling pushes from functions
 PUSH='on'
@@ -113,16 +135,17 @@ compute_new_version() {
 }
 
 update_parent() {
-    change_version $1 $2 parent
+    change_version $1 true $2
 }
 
 change_version() {
     newVersion=${1:-compute}
+    targetParent=${2:-false}
 
     # if we provide a 3rd arg, switch to parent processing instead
     expr="project.version"
     target="project"
-    if [ -n "$3" ]; then
+    if [ "${targetParent}" == true ]; then
         expr="project.parent.version"
         target="parent"
     fi
@@ -133,12 +156,15 @@ change_version() {
     fi
 
     currentVersion=$(evaluate_mvn_expr ${expr})
-    cmd="mvn versions:set -DnewVersion=${newVersion} > /dev/null"
-    if [ -n "$3" ]; then
-        cmd="sed -i '' -e 's/<version>${currentVersion}</<version>${newVersion}</g' pom.xml"
+    local cmd="mvn versions:set -DnewVersion=${newVersion} > /dev/null"
+    if [ "${targetParent}" == true ]; then
+        local escapedCurrent=$(sed 's|[]\/$*.^[]|\\&|g' <<< ${currentVersion})
+        echo "${escapedCurrent}"
+        cmd="sed -i '' -e 's/<version>${escapedCurrent}</<version>${newVersion}</g' pom.xml"
     fi
+    echo "${cmd}"
 
-    if eval ${cmd}; then
+    if ${cmd}; then
         # Only attempt committing if we have changes otherwise the script will exit
         if [[ `git status --porcelain` ]]; then
             log "Updated ${target} from ${YELLOW}${currentVersion}${BLUE} to ${YELLOW}${newVersion}"
@@ -147,8 +173,8 @@ change_version() {
                 log "Build ${YELLOW}OK"
                 rm build.log
 
-                if [ -n "$2" ]; then
-                    jira=${2}": "
+                if [ -n "$3" ]; then
+                    jira=${3}": "
                 else
                     jira=""
                 fi
@@ -169,12 +195,13 @@ change_version() {
         log_failed "Couldn't set version. Reverting to upstream version."
         git reset --hard upstream/${BRANCH}
     fi
-
-    echo $newVersion
 }
 
 create_branch() {
     branch=$1
+
+    log "create ${branch}"
+    return 0
 
     if git ls-remote --heads upstream ${branch} | grep ${branch} > /dev/null;
     then
@@ -192,6 +219,9 @@ create_branch() {
 
 delete_branch() {
     branch=$1
+
+    log "delete ${branch}"
+    return 0
 
     if git ls-remote --heads upstream ${branch} | grep ${branch} > /dev/null;
     then
@@ -213,6 +243,9 @@ delete_branch() {
 }
 
 release() {
+    log "release"
+    return 0
+
     current_version=$(evaluate_mvn_expr 'project.version')
 
     if [[ "${current_version}" != *-SNAPSHOT ]]; then
@@ -289,8 +322,21 @@ release() {
     PUSH='on'
     push_to_remote "upstream" "--tags"
 
+    # todo: update launcher catalog instead
     log "Appending new version ${YELLOW}${releaseVersion}${BLUE} to ${YELLOW}${CATALOG_FILE}"
     echo "${BOOSTER}: ${BRANCH} => ${releaseVersion}" >> "$CATALOG_FILE"
+}
+
+
+show_help () {
+    echo "Usage:"
+    echo "    -h                            Display this help message."
+    echo "    -d                            Toggle dry-run mode: no commits or pushes."
+    echo "    release                       Release the boosters."
+    echo "    create_branch <branch name>   Create a branch."
+    echo "    delete_branch <branch name>   Delete a branch."
+    echo "    change_version                Change the project or parent version."
+    exit 0
 }
 
 boosters=( $(find . -name "spring-boot-*-booster" -type d -exec basename {} \; | sort))
@@ -298,6 +344,92 @@ if [ ${#boosters[@]} == 0 ]; then
     echo -e "${RED}No boosters named spring-boot-*-booster could be found in $(pwd)${NC}"
     exit 1
 fi
+
+if [ $# -eq 0 ]; then
+    show_help
+fi
+
+while getopts ":h:d" opt; do
+    case ${opt} in
+        h)
+            show_help
+        ;;
+        d)
+            echo -e "${YELLOW}== DRY-RUN MODE ACTIVATED: no commits or pushes will be issued =="
+            echo
+            PUSH='off'
+            COMMIT='off'
+        ;;
+        \?)
+            echo "Invalid Option: -$OPTARG" 1>&2
+            exit 1
+        ;;
+    esac
+done
+shift $((OPTIND - 1))
+
+subcommand=$1
+cmd=""
+shift # Remove script name from the argument list
+case "$subcommand" in
+    release)
+        CURRENT_DIR=`pwd`
+        CATALOG_FILE=$CURRENT_DIR"/booster-catalog-versions.txt"
+        rm -f "$CATALOG_FILE"
+        touch "$CATALOG_FILE"
+
+        cmd="release"
+    ;;
+    create_branch)
+        echo "create branch"
+        if [ -n "$1" ]; then
+            branch=$1
+            cmd="create_branch ${branch}"
+        else
+            error "Must provide a branch name to create"
+        fi
+        shift
+
+    ;;
+    delete_branch)
+        if [ -n "$1" ]; then
+            branch=$1
+            cmd="delete_branch ${branch}"
+        else
+            error "Must provide a branch name to delete"
+        fi
+        shift
+    ;;
+    change_version)
+
+    # Process options
+        while getopts ":pv:m:" opt; do
+            case ${opt} in
+                p)
+                    targetParent=true
+                ;;
+                v)
+                    version=$OPTARG
+                ;;
+                m)
+                    jira=$OPTARG
+                ;;
+                \?)
+                    echo "Invalid Option: -$OPTARG" 1>&2
+                    exit 1
+                ;;
+                :)
+                    echo "Invalid Option: -$OPTARG requires an argument" 1>&2
+                    exit 1
+                ;;
+            esac
+        done
+        shift $((OPTIND - 1))
+
+        cmd="change_version ${version:-compute} ${jira:-} ${targetParent:-false}"
+    ;;
+esac
+
 
 for BOOSTER in ${boosters[@]}
 do
@@ -345,7 +477,8 @@ do
                         log_failed "Error running script"
                     fi
                 else
-                    log "No script provided. Only refreshed code."
+                    log "Executing ${cmd}"
+                    ${cmd}
                 fi
 
                 log "Done"
@@ -354,7 +487,6 @@ do
                 echo
             done
         fi
-
 
         echo -e "----------------------------------------------------------------------------------------\n"
         popd > /dev/null
