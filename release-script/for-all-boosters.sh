@@ -298,7 +298,7 @@ fi
 
 for BOOSTER in ${boosters[@]}
 do
-    #if [ "$BOOSTER" != spring-boot-circuit-breaker-booster ] && [ "$BOOSTER" != spring-boot-configmap-booster ] && [ "$BOOSTER" != spring-boot-crud-booster ]
+    #if [ "$BOOSTER" != spring-boot-circuit-breaker-booster ] && [ "$BOOSTER" != spring-boot-configmap-booster ] && [ "$BOOSTER" != spring-boot-crud-booster ]; then
     if true; then
         pushd ${BOOSTER} > /dev/null
 
