@@ -344,6 +344,9 @@ do
                 else
                     log "No script provided. Only refreshed code."
                 fi
+
+                log "Done"
+                echo
             done
         fi
 
