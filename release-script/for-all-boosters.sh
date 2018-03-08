@@ -26,6 +26,9 @@ declare -a failed=( )
 # skipped boosters
 declare -a ignored=( )
 
+# processed boosters
+declare -a processed=( )
+
 evaluate_mvn_expr() {
     # Evaluate the given maven expression, cf: https://stackoverflow.com/questions/3545292/how-to-get-maven-project-version-to-the-bash-command-line
     result=`mvn -q -Dexec.executable="echo" -Dexec.args='${'${1}'}' --non-recursive exec:exec`
@@ -346,6 +349,8 @@ do
                 fi
 
                 log "Done"
+                processedItem="${BRANCH}:${BOOSTER}"
+                processed+=( ${processedItem} )
                 echo
             done
         fi
@@ -355,6 +360,11 @@ do
         popd > /dev/null
     fi
 done
+
+if [ ${#processed[@]} != 0 ]; then
+    echo -e "${BLUE}The following boosters were processed:${YELLOW}"
+    printf '\t%s\n' "${processed[*]}" #todo: figure out how to output each on its own line
+fi
 
 if [ ${#failed[@]} != 0 ]; then
     echo -e "${BLUE}The following boosters failed:${RED}"
