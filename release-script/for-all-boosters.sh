@@ -312,15 +312,11 @@ do
         else
             for BRANCH in "master" "redhat"
             do
-
-
                 # check if branch exists, otherwise skip booster
                 if ! git show-ref --verify --quiet refs/heads/${BRANCH}; then
                     log_ignored "Branch does not exist"
                     continue
                 fi
-
-                git reset --hard upstream/${BRANCH} > /dev/null
 
                 # if booster has uncommitted changes, skip it
                 if [[ `git status --porcelain` ]]; then
@@ -329,9 +325,9 @@ do
                 fi
 
                 # assumes "official" remote is named 'upstream'
-                #            git fetch -q upstream > /dev/null
+                git fetch -q upstream > /dev/null
 
-                #            git co -q ${BRANCH} > /dev/null && git reset --hard upstream/${BRANCH} > /dev/null
+                git co -q ${BRANCH} > /dev/null && git rebase upstream/${BRANCH} > /dev/null
 
                 # if we need to replace a multi-line match in the pom file of each booster, for example:
                 # perl -pi -e 'undef $/; s/<properties>\s*<\/properties>/replacement/' pom.xml
