@@ -298,41 +298,53 @@ do
 
         echo -e "${BLUE}> ${YELLOW}${BOOSTER}${BLUE}${NC}"
 
-        for BRANCH in "master" "redhat"
-        do
-            # check if branch exists, otherwise skip booster
-            if ! git show-ref --verify --quiet refs/heads/${BRANCH}; then
-                log_ignored "Branch does not exist"
-                continue
-            fi
+        if [ ! -d .git ]; then
+            msg="Not under git control"
+            echo -e "${MAGENTA}${msg}${MAGENTA}. Ignoring.${NC}"
+            ignoredItem="${BOOSTER}:\"${msg}\""
+            ignored+=( ${ignoredItem} )
+        else
+            for BRANCH in "master" "redhat"
+            do
 
-            # if booster has uncommitted changes, skip it
-            if [[ `git status --porcelain` ]]; then
-                log_ignored "You have uncommitted changes, please stash these changes"
-                continue
-            fi
 
-            # assumes "official" remote is named 'upstream'
-            git fetch -q upstream > /dev/null
-
-            git co -q ${BRANCH} > /dev/null && git rebase upstream/${BRANCH} > /dev/null
-
-            # if we need to replace a multi-line match in the pom file of each booster, for example:
-            # perl -pi -e 'undef $/; s/<properties>\s*<\/properties>/replacement/' pom.xml
-
-            # if we need to execute sed on the result of find:
-            # find . -name "application.yaml" -exec sed -i '' -e "s/provider: fabric8/provider: snowdrop/g" {} +
-
-            if [ -e "$1" ]; then
-                script=$1
-                log "Running ${YELLOW}${script}${BLUE} script"
-                if ! source $1; then
-                    log_failed "Error running script"
+                # check if branch exists, otherwise skip booster
+                if ! git show-ref --verify --quiet refs/heads/${BRANCH}; then
+                    log_ignored "Branch does not exist"
+                    continue
                 fi
-            else
-                log "No script provided. Only refreshed code."
-            fi
-        done
+
+                git reset --hard upstream/${BRANCH} > /dev/null
+
+                # if booster has uncommitted changes, skip it
+                if [[ `git status --porcelain` ]]; then
+                    log_ignored "You have uncommitted changes, please stash these changes"
+                    continue
+                fi
+
+                # assumes "official" remote is named 'upstream'
+                #            git fetch -q upstream > /dev/null
+
+                #            git co -q ${BRANCH} > /dev/null && git reset --hard upstream/${BRANCH} > /dev/null
+
+                # if we need to replace a multi-line match in the pom file of each booster, for example:
+                # perl -pi -e 'undef $/; s/<properties>\s*<\/properties>/replacement/' pom.xml
+
+                # if we need to execute sed on the result of find:
+                # find . -name "application.yaml" -exec sed -i '' -e "s/provider: fabric8/provider: snowdrop/g" {} +
+
+                if [ -e "$1" ]; then
+                    script=$1
+                    log "Running ${YELLOW}${script}${BLUE} script"
+                    if ! source $1; then
+                        log_failed "Error running script"
+                    fi
+                else
+                    log "No script provided. Only refreshed code."
+                fi
+            done
+        fi
+
 
         echo -e "----------------------------------------------------------------------------------------\n"
         popd > /dev/null
