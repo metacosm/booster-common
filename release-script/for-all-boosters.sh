@@ -290,7 +290,7 @@ release() {
     echo "${BOOSTER}: ${BRANCH} => ${releaseVersion}" >> "$CATALOG_FILE"
 }
 
-boosters=( $(find . -name "spring-boot-*-booster"))
+boosters=( $(find . -name "spring-boot-*-booster" -type d -exec basename {} \; | sort))
 if [ ${#boosters[@]} == 0 ]; then
     echo -e "${RED}No boosters named spring-boot-*-booster could be found in $(pwd)${NC}"
     exit 1
