@@ -207,9 +207,6 @@ change_version() {
 create_branch() {
     branch=$1
 
-    log "create ${branch}"
-    return 0
-
     if git ls-remote --heads upstream ${branch} | grep ${branch} > /dev/null;
     then
         log_ignored "Branch already exists on remote"
@@ -226,9 +223,6 @@ create_branch() {
 
 delete_branch() {
     branch=$1
-
-    log "delete ${branch}"
-    return 0
 
     if git ls-remote --heads upstream ${branch} | grep ${branch} > /dev/null;
     then
@@ -250,9 +244,6 @@ delete_branch() {
 }
 
 release() {
-    log "release"
-    return 0
-
     current_version=$(evaluate_mvn_expr 'project.version')
 
     if [[ "${current_version}" != *-SNAPSHOT ]]; then
