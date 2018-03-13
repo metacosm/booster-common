@@ -93,11 +93,6 @@ log_failed() {
    ignored+=( ${ignoredItem} )
 }
 
-error() {
-    echo -e "${RED}Error: ${1}${NC}"
-    exit ${2:-1}
-}
-
 push_to_remote() {
     currentBranch=${branch:-$BRANCH}
     remote=${1:-upstream}
@@ -352,8 +347,15 @@ show_help () {
     echo "    create_branch <branch name>   Create a branch."
     echo "    delete_branch <branch name>   Delete a branch."
     echo "    change_version <args>         Change the project or parent version."
-    exit 0
+    echo "    script <path to script>       Run provided script."
 }
+
+error() {
+    echo -e "${RED}Error: ${1}${NC}"
+    show_help
+    exit ${2:-1}
+}
+
 
 boosters=( $(find . -name "spring-boot-*-booster" -type d -exec basename {} \; | sort))
 if [ ${#boosters[@]} == 0 ]; then
@@ -369,6 +371,7 @@ while getopts ":h:d" opt; do
     case ${opt} in
         h)
             show_help
+            exit 0
         ;;
         d)
             echo -e "${YELLOW}== DRY-RUN MODE ACTIVATED: no commits or pushes will be issued ==${NC}"
@@ -377,9 +380,7 @@ while getopts ":h:d" opt; do
             COMMIT='off'
         ;;
         \?)
-            echo "Invalid Option: -$OPTARG" 1>&2
-            show_help
-            exit 1
+            error "Invalid Option: -$OPTARG" 1>&2
         ;;
     esac
 done
@@ -387,7 +388,6 @@ shift $((OPTIND - 1))
 
 subcommand=$1
 cmd=""
-shift # Remove script name from the argument list
 case "$subcommand" in
     release)
         CURRENT_DIR=`pwd`
@@ -432,23 +432,27 @@ case "$subcommand" in
                     jira=$OPTARG
                 ;;
                 \?)
-                    echo "Invalid Option: -$OPTARG" 1>&2
-                    exit 1
+                    error "Invalid Option: -$OPTARG" 1>&2
                 ;;
                 :)
-                    echo "Invalid Option: -$OPTARG requires an argument" 1>&2
-                    exit 1
+                    error "Invalid Option: -$OPTARG requires an argument" 1>&2
                 ;;
             esac
         done
         shift $((OPTIND - 1))
 
-        cmd="change_version ${version:-compute} ${jira:-} ${targetParent:-false}"
+        cmd="change_version ${version:-compute} ${targetParent:-off} ${jira:-}"
+    ;;
+    script)
+        shift
+        if [ -n "$1" ]; then
+            cmd="source $1"
+        else
+            error "Must provide a script to execute"
+        fi
     ;;
     *)
-        echo "Unknown command: ${subcommand}" 1>&2
-        show_help
-        exit 1
+        error "Unknown command: ${subcommand}" 1>&2
     ;;
 esac
 
@@ -491,20 +495,12 @@ do
 
                 # if we need to execute sed on the result of find:
                 # find . -name "application.yaml" -exec sed -i '' -e "s/provider: fabric8/provider: snowdrop/g" {} +
-
-                if [ -e "$1" ]; then
-                    script=$1
-                    log "Running ${YELLOW}${script}${BLUE} script"
-                    if ! source $1; then
-                        log_failed "Error running script"
-                    fi
-                else
-                    log "Executing ${cmd}"
-                    # let the command fail without impacting the main loop, let the command decide on what to log / fail / ignore
-                    if ! ${cmd}; then
-                        log "Done"
-                        continue
-                    fi
+            
+                log "Executing ${cmd}"
+                # let the command fail without impacting the main loop, let the command decide on what to log / fail / ignore
+                if ! ${cmd}; then
+                    log "Done"
+                    continue
                 fi
 
                 log "Done"
