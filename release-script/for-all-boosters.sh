@@ -165,7 +165,7 @@ change_version() {
     if [ "${targetParent}" == true ]; then
         local escapedCurrent=$(sed 's|[]\/$*.^[]|\\&|g' <<< ${currentVersion})
         echo "${escapedCurrent}"
-        cmd="sed -i '' -e 's/<version>${escapedCurrent}</<version>${newVersion}</g' pom.xml"
+        cmd="sed -i -e 's/<version>${escapedCurrent}</<version>${newVersion}</g' pom.xml"
     fi
     echo "${cmd}"
 
