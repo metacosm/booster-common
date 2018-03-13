@@ -367,6 +367,7 @@ if [ $# -eq 0 ]; then
     show_help
 fi
 
+# See https://sookocheff.com/post/bash/parsing-bash-script-arguments-with-shopts/
 while getopts ":h:d" opt; do
     case ${opt} in
         h)
@@ -398,28 +399,25 @@ case "$subcommand" in
         cmd="release"
     ;;
     create_branch)
-        echo "create branch"
+        shift
         if [ -n "$1" ]; then
             branch=$1
             cmd="create_branch ${branch}"
         else
             error "Must provide a branch name to create"
         fi
-        shift
-
     ;;
     delete_branch)
+        shift
         if [ -n "$1" ]; then
             branch=$1
             cmd="delete_branch ${branch}"
         else
             error "Must provide a branch name to delete"
         fi
-        shift
     ;;
     change_version)
-
-    # Process options
+        # Process options
         while getopts ":pv:m:" opt; do
             case ${opt} in
                 p)
