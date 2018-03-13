@@ -329,8 +329,14 @@ release() {
 }
 
 revert () {
+    local status=$(git status --porcelain)
+    if [[ status ]]; then
+        log "${RED}DANGER: YOU HAVE UNCOMMITTED CHANGES:"
+        echo "${status}"
+    fi
+
     log "Are you sure you want to revert ${YELLOW}${BRANCH}${BLUE} branch to the ${YELLOW}upstream${BLUE} remote state?"
-    log "${RED}YOU WILL LOSE ALL LOCAL COMMITS SO BE CAREFUL!"
+    log "${RED}YOU WILL LOSE ALL UNPUSHED LOCAL COMMITS SO BE CAREFUL!"
     log "Press ${RED}Y to revert${BLUE} or ${YELLOW}any other key to leave the booster as-is."
     read answer
     if [ "${answer}" == Y ]; then
