@@ -328,6 +328,18 @@ release() {
     echo "${BOOSTER}: ${BRANCH} => ${releaseVersion}" >> "$CATALOG_FILE"
 }
 
+revert () {
+    log "Are you sure you want to revert ${YELLOW}${BRANCH}${BLUE} branch to the ${YELLOW}upstream${BLUE} remote state?"
+    log "${RED}YOU WILL LOSE ALL LOCAL COMMITS SO BE CAREFUL!"
+    log "Press ${RED}Y to revert${BLUE} or ${YELLOW}any other key to leave the booster as-is."
+    read answer
+    if [ "${answer}" == Y ]; then
+        log "Resetting to upstream state"
+        git reset --hard upstream/${BRANCH}
+    else
+        log "Leaving as-is"
+    fi
+}
 
 show_help () {
     echo "Usage:"
@@ -338,6 +350,7 @@ show_help () {
     echo "    delete_branch <branch name>   Delete a branch."
     echo "    change_version <args>         Change the project or parent version."
     echo "    script <path to script>       Run provided script."
+    echo "    revert                        Revert the booster state to the last remote version."
 }
 
 error() {
@@ -438,6 +451,9 @@ case "$subcommand" in
         else
             error "Must provide a script to execute"
         fi
+    ;;
+    revert)
+        cmd="revert"
     ;;
     *)
         error "Unknown command: ${subcommand}" 1>&2
