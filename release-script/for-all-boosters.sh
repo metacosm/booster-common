@@ -352,9 +352,11 @@ revert () {
 
 show_help () {
     simple_log "This scripts executes the given command on all local boosters (identified by the 'spring-boot-*-booster' pattern) found in the current directory."
+    simple_log "Note: options must be combined (e.g. -fd instead of -f -d) for subcommand processing to work properly"
     simple_log "Usage:"
     simple_log "    -h                            Display this help message."
     simple_log "    -d                            Toggle dry-run mode: no commits or pushes."
+    simple_log "    -f                            Bypass check for local changes, forcing execution if changes exist."
     simple_log "    release                       Release the boosters."
     simple_log "    create_branch <branch name>   Create a branch."
     simple_log "    delete_branch <branch name>   Delete a branch."
@@ -383,7 +385,7 @@ if [ $# -eq 0 ]; then
 fi
 
 # See https://sookocheff.com/post/bash/parsing-bash-script-arguments-with-shopts/
-while getopts ":h:d" opt; do
+while getopts ":hdf" opt; do
     case ${opt} in
         h)
             show_help
@@ -395,8 +397,13 @@ while getopts ":h:d" opt; do
             PUSH='off'
             COMMIT='off'
         ;;
+        f)
+            echo -e "${YELLOW}== BYPASSING CHECK FOR LOCAL CHANGES ==${NC}"
+            echo
+            IGNORE_LOCAL_CHANGES='on'
+        ;;
         \?)
-            error "Invalid Option: -$OPTARG" 1>&2
+            error "Invalid option: -$OPTARG" 1>&2
         ;;
     esac
 done
