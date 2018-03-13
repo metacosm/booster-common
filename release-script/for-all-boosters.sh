@@ -143,10 +143,6 @@ compute_new_version() {
     echo ${new_version}
 }
 
-update_parent() {
-    change_version $1 true $2
-}
-
 change_version() {
     newVersion=${1:-compute}
     targetParent=${2:-false}
