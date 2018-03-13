@@ -360,17 +360,27 @@ show_help () {
     simple_log "    release                       Release the boosters."
     simple_log "    create_branch <branch name>   Create a branch."
     simple_log "    delete_branch <branch name>   Delete a branch."
-    simple_log "    change_version <args>         Change the project or parent version."
+    simple_log "    change_version <args>         Change the project or parent version. Run with -h to see help."
     simple_log "    script <path to script>       Run provided script."
     simple_log "    revert                        Revert the booster state to the last remote version."
     simple_log "    cmd <command>                 Execute the provided command."
     echo
 }
 
+show_change_version_help() {
+    simple_log "This command changes the project's (or parent's, if -p flag is set) version"
+    simple_log "Usage:"
+    simple_log "    -h                            Display this help message."
+    simple_log "    -p                            Change parent version instead of project version."
+    simple_log "    -v <version name>             Optional: specify which version to use. Version is computed otherwise."
+    simple_log "    -m <commit prefix>            Optional: specify a commit message prefix (e.g. JIRA / github ticket number) to prepend to commit messages. Empty otherwise."
+}
+
 error() {
     echo -e "${RED}Error: ${1}${NC}"
-    show_help
-    exit ${2:-1}
+    local help=${2:-show_help}
+    ${help}
+    exit ${3:-1}
 }
 
 
@@ -440,8 +450,12 @@ case "$subcommand" in
     ;;
     change_version)
         # Process options
-        while getopts ":pv:m:" opt; do
-            case ${opt} in
+        while getopts ":hpv:m:" opt2; do
+            case ${opt2} in
+                h)
+                    show_change_version_help
+                    exit 0
+                ;;
                 p)
                     targetParent=true
                 ;;
@@ -452,10 +466,10 @@ case "$subcommand" in
                     jira=$OPTARG
                 ;;
                 \?)
-                    error "Invalid Option: -$OPTARG" 1>&2
+                    error "Invalid change_version option: -$OPTARG" "show_change_version_help" 1>&2
                 ;;
                 :)
-                    error "Invalid Option: -$OPTARG requires an argument" 1>&2
+                    error "Invalid change_version option: -$OPTARG requires an argument" "show_change_version_help" 1>&2
                 ;;
             esac
         done
