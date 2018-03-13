@@ -342,15 +342,17 @@ revert () {
 }
 
 show_help () {
-    echo "Usage:"
-    echo "    -h                            Display this help message."
-    echo "    -d                            Toggle dry-run mode: no commits or pushes."
-    echo "    release                       Release the boosters."
-    echo "    create_branch <branch name>   Create a branch."
-    echo "    delete_branch <branch name>   Delete a branch."
-    echo "    change_version <args>         Change the project or parent version."
-    echo "    script <path to script>       Run provided script."
-    echo "    revert                        Revert the booster state to the last remote version."
+    simple_log "This scripts executes the given command on all local boosters (identified by the 'spring-boot-*-booster' pattern) found in the current directory."
+    simple_log "Usage:"
+    simple_log "    -h                            Display this help message."
+    simple_log "    -d                            Toggle dry-run mode: no commits or pushes."
+    simple_log "    release                       Release the boosters."
+    simple_log "    create_branch <branch name>   Create a branch."
+    simple_log "    delete_branch <branch name>   Delete a branch."
+    simple_log "    change_version <args>         Change the project or parent version."
+    simple_log "    script <path to script>       Run provided script."
+    simple_log "    revert                        Revert the booster state to the last remote version."
+    echo
 }
 
 error() {
@@ -456,7 +458,7 @@ case "$subcommand" in
         cmd="revert"
     ;;
     *)
-        error "Unknown command: ${subcommand}" 1>&2
+        error "Unknown command: '${subcommand}'" 1>&2
     ;;
 esac
 
