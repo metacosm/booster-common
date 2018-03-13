@@ -23,26 +23,26 @@ GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 MAGENTA='\033[0;35m'
 
+simple_log () {
+    echo -e "${BLUE}${1}${NC}"
+}
+
 # create a temporary directory WORK_DIR to be removed at the exit of the script
 # see: https://stackoverflow.com/questions/4632028/how-to-create-a-temporary-directory
 # ====
-# the directory of the script
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# the temp directory used, within $DIR
-# omit the -p parameter to create a temporal directory in the default location
-WORK_DIR=`mktemp -d -p "$DIR"`
+WORK_DIR=`mktemp -d`
+simple_log "Created temp working directory $WORK_DIR"
 
 # check if tmp dir was created
 if [[ ! "$WORK_DIR" || ! -d "$WORK_DIR" ]]; then
-    echo "Could not create temp dir"
+    simple_log "Could not create temp directory"
     exit 1
 fi
 
 # deletes the temp directory
 function cleanup {
     rm -rf "$WORK_DIR"
-    echo "Deleted temp working directory $WORK_DIR"
+    simple_log "Deleted temp working directory $WORK_DIR"
 }
 
 # register the cleanup function to be called on the EXIT signal
