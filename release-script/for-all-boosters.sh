@@ -170,14 +170,8 @@ change_version() {
         echo "${escapedCurrent}"
         cmd="sed -i '' -e 's/<version>${escapedCurrent}</<version>${newVersion}</g' pom.xml"
     fi
-    echo "${cmd}"
     
-    if "${cmd}"; then
-        find . -name "*.versionsBackup" -delete
-        git diff
-        git reset --hard upstream/${BRANCH}
-        return 0
-    
+    if eval ${cmd}; then
         # Only attempt committing if we have changes otherwise the script will exit
         if [[ `git status --porcelain` ]]; then
             log "Updated ${target} from ${YELLOW}${currentVersion}${BLUE} to ${YELLOW}${newVersion}"
