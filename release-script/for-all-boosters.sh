@@ -169,7 +169,7 @@ change_version() {
     fi
     echo "${cmd}"
     
-    if ${cmd}; then
+    if "${cmd}"; then
         find . -name "*.versionsBackup" -delete
         git diff
         git reset --hard upstream/${BRANCH}
@@ -488,6 +488,15 @@ do
         else
             for BRANCH in "master" "redhat"
             do
+                # if we want to revert we must do it first (otherwise local change check will bypass it)
+                if [ "${cmd}" == revert ]; then
+                    if ! revert; then
+                        log_failed "Revert failed"
+                    fi
+                    log "Done"
+                    continue
+                fi
+
                 # check if branch exists, otherwise skip booster
                 if ! git show-ref --verify --quiet refs/heads/${BRANCH}; then
                     log_ignored "Branch does not exist"
