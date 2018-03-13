@@ -180,7 +180,7 @@ create_branch() {
     then
         log_ignored "Branch already exists on remote"
     else
-        if ! git co -b ${branch} > /dev/null 2> /dev/null;
+        if ! git checkout -b ${branch} > /dev/null 2> /dev/null;
         then
             log_failed "Couldn't create branch"
             return 1
@@ -330,7 +330,7 @@ do
                 # assumes "official" remote is named 'upstream'
                 git fetch -q upstream > /dev/null
 
-                git co -q ${BRANCH} > /dev/null && git rebase upstream/${BRANCH} > /dev/null
+                git checkout -q ${BRANCH} > /dev/null && git rebase upstream/${BRANCH} > /dev/null
 
                 # if we need to replace a multi-line match in the pom file of each booster, for example:
                 # perl -pi -e 'undef $/; s/<properties>\s*<\/properties>/replacement/' pom.xml
