@@ -369,7 +369,7 @@ while getopts ":h:d" opt; do
             show_help
         ;;
         d)
-            echo -e "${YELLOW}== DRY-RUN MODE ACTIVATED: no commits or pushes will be issued =="
+            echo -e "${YELLOW}== DRY-RUN MODE ACTIVATED: no commits or pushes will be issued ==${NC}"
             echo
             PUSH='off'
             COMMIT='off'
