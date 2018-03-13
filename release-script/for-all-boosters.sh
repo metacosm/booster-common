@@ -351,7 +351,7 @@ show_help () {
     echo "    release                       Release the boosters."
     echo "    create_branch <branch name>   Create a branch."
     echo "    delete_branch <branch name>   Delete a branch."
-    echo "    change_version                Change the project or parent version."
+    echo "    change_version <args>         Change the project or parent version."
     exit 0
 }
 
@@ -378,6 +378,7 @@ while getopts ":h:d" opt; do
         ;;
         \?)
             echo "Invalid Option: -$OPTARG" 1>&2
+            show_help
             exit 1
         ;;
     esac
@@ -443,6 +444,11 @@ case "$subcommand" in
         shift $((OPTIND - 1))
 
         cmd="change_version ${version:-compute} ${jira:-} ${targetParent:-false}"
+    ;;
+    *)
+        echo "Unknown command: ${subcommand}" 1>&2
+        show_help
+        exit 1
     ;;
 esac
 
