@@ -352,6 +352,7 @@ show_help () {
     simple_log "    change_version <args>         Change the project or parent version."
     simple_log "    script <path to script>       Run provided script."
     simple_log "    revert                        Revert the booster state to the last remote version."
+    simple_log "    cmd <command>                 Execute the provided command."
     echo
 }
 
@@ -457,6 +458,14 @@ case "$subcommand" in
     revert)
         cmd="revert"
     ;;
+    cmd)
+        shift
+        if [ -n "$1" ]; then
+            cmd="$1"
+        else
+            error "Must provide a command to execute"
+        fi
+    ;;
     *)
         error "Unknown command: '${subcommand}'" 1>&2
     ;;
@@ -502,7 +511,7 @@ do
                 # if we need to execute sed on the result of find:
                 # find . -name "application.yaml" -exec sed -i '' -e "s/provider: fabric8/provider: snowdrop/g" {} +
             
-                log "Executing ${cmd}"
+                log "Executing '${YELLOW}${cmd}${BLUE}'"
                 # let the command fail without impacting the main loop, let the command decide on what to log / fail / ignore
                 if ! ${cmd}; then
                     log "Done"
