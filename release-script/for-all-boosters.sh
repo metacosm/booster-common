@@ -173,9 +173,6 @@ change_version() {
     
     if [ $? -eq 0 ]; then
         find . -name "*.versionsBackup" -delete
-        git diff
-        git reset --hard upstream/${BRANCH}
-        return 0
 
         # Only attempt committing if we have changes otherwise the script will exit
         if [[ `git status --porcelain` ]]; then
