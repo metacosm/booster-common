@@ -551,15 +551,15 @@ done
 
 if [ ${#processed[@]} != 0 ]; then
     echo -e "${BLUE}${#processed[@]} booster/branch combinations were processed:${YELLOW}"
-    printf '\t%s\n' "${processed[*]}" #todo: figure out how to output each on its own line
+    printf '\t%s\n' "${processed[@]}"
 fi
 
 if [ ${#failed[@]} != 0 ]; then
     echo -e "${BLUE}${#failed[@]} booster/branch combinations failed:${RED}"
-    printf '\t%s\n' "${failed[*]}" #todo: figure out how to output each on its own line
+    printf '\t%s\n' "${failed[@]}"
 fi
 
 if [ ${#ignored[@]} != 0 ]; then
     echo -e "${BLUE}${#ignored[@]} booster/branch combinations  were skipped:${MAGENTA}"
-    printf '\t%s\n' "${ignored[*]}" #todo: figure out how to output each on its own line
+    printf '\t%s\n' "${ignored[@]}"
 fi
