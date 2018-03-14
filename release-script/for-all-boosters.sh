@@ -26,24 +26,28 @@ simple_log () {
 
 # create a temporary directory WORK_DIR to be removed at the exit of the script
 # see: https://stackoverflow.com/questions/4632028/how-to-create-a-temporary-directory
+# Note: this is currently unused and uses a nested function as seen here: https://stackoverflow.com/a/31316688
 # ====
-WORK_DIR=`mktemp -d`
-simple_log "Created temp working directory $WORK_DIR"
+create_auto_deleted_temp_dir() (
+
+    WORK_DIR=`mktemp -d`
+    simple_log "Created temp working directory $WORK_DIR"
 
 # check if tmp dir was created
-if [[ ! "$WORK_DIR" || ! -d "$WORK_DIR" ]]; then
+    if [[ ! "$WORK_DIR" || ! -d "$WORK_DIR" ]]; then
     simple_log "Could not create temp directory"
     exit 1
-fi
+    fi
 
 # deletes the temp directory
-function cleanup {
+    function cleanup {
     rm -rf "$WORK_DIR"
     simple_log "Deleted temp working directory $WORK_DIR"
 }
 
 # register the cleanup function to be called on the EXIT signal
-trap cleanup EXIT
+    trap cleanup EXIT
+)
 # ====
 
 
