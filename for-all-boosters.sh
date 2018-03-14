@@ -337,7 +337,6 @@ revert () {
 
 show_help () {
     simple_log "This scripts executes the given command on all local boosters (identified by the 'spring-boot-*-booster' pattern) found in the current directory."
-    simple_log "Note: options must be combined (e.g. -fd instead of -f -d) for subcommand processing to work properly"
     simple_log "Usage:"
     simple_log "    -h                            Display this help message."
     simple_log "    -d                            Toggle dry-run mode: no commits or pushes."
@@ -434,7 +433,9 @@ case "$subcommand" in
         fi
     ;;
     change_version)
-        # Process options
+        # Needed in order to "reset" the options processing for the subcommand
+        OPTIND=2
+        # Process options of subcommand
         while getopts ":hpv:m:" opt2; do
             case ${opt2} in
                 h)
@@ -529,7 +530,7 @@ do
 
                 # if we need to execute sed on the result of find:
                 # find . -name "application.yaml" -exec sed -i '' -e "s/provider: fabric8/provider: snowdrop/g" {} +
-            
+
                 log "Executing '${YELLOW}${cmd}${BLUE}'"
                 # let the command fail without impacting the main loop, let the command decide on what to log / fail / ignore
                 if ! ${cmd}; then
