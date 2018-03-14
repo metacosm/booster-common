@@ -521,12 +521,13 @@ do
                         log_ignored "You have uncommitted changes, please stash these changes"
                         continue
                     fi
+
+                    # assumes "official" remote is named 'upstream'
+                    git fetch -q upstream > /dev/null
+
+                    git checkout -q ${BRANCH} > /dev/null && git rebase upstream/${BRANCH} > /dev/null
                 fi
 
-                # assumes "official" remote is named 'upstream'
-                git fetch -q upstream > /dev/null
-
-                git checkout -q ${BRANCH} > /dev/null && git rebase upstream/${BRANCH} > /dev/null
 
                 # if we need to replace a multi-line match in the pom file of each booster, for example:
                 # perl -pi -e 'undef $/; s/<properties>\s*<\/properties>/replacement/' pom.xml
