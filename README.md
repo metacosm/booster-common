@@ -1,8 +1,15 @@
-# Common booster utilities
+# Scripts to process boosters
 
-  
-## Release process
-  
-1. `mvn release:prepare`
-3. `git checkout $TAG`
-4. `mvn clean deploy -Prelease`
+## `for-all-boosters`
+
+A script that operates on all boosters identified as sub-directories (named with the `spring-boot-*-booster` pattern) of the directory in which the script runs. 
+
+Run `for-all-boosters.sh -h` for an overview of what the script can do and how to use it.
+
+## `run_tests.sh`
+
+Runs the integration tests on the identified boosters. See initial comment on script for more details. Note that this script will probably be merged into `for-all-boosters` at some point.
+
+## `sync-descriptors.sh`
+
+A script that synchronizes YAML descriptors between booster branches. Here for historical reasons, shouldn't be needed anymore.
