@@ -323,10 +323,9 @@ release() {
 }
 
 revert () {
-    local status=$(git status --porcelain)
-    if [[ status ]]; then
+    if [[ `git status --porcelain` ]]; then
         log "${RED}DANGER: YOU HAVE UNCOMMITTED CHANGES:"
-        echo "${status}"
+        git status --porcelain
     fi
 
     log "Are you sure you want to revert ${YELLOW}${BRANCH}${BLUE} branch to the ${YELLOW}upstream${BLUE} remote state?"
