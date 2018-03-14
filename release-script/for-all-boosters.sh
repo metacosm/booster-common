@@ -164,6 +164,7 @@ change_version() {
     local cmd="mvn versions:set -DnewVersion=${newVersion} > /dev/null"
     if [ "${targetParent}" == true ]; then
         local escapedCurrent=$(sed 's|[]\/$*.^[]|\\&|g' <<< ${currentVersion})
+        # see: https://unix.stackexchange.com/a/92907
         cmd="perl -pi -e 's/<version>${escapedCurrent}</<version>${newVersion}</g' pom.xml"
     fi
     
