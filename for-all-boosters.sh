@@ -79,13 +79,13 @@ log() {
 log_ignored() {
    log "${MAGENTA}${1}${MAGENTA}. Ignoring."
    ignoredItem="$(current_branch):${BOOSTER}:\"${1}\""
-   ignored+=( ${ignoredItem} )
+   ignored+=( "${ignoredItem}" )
 }
 
 log_failed() {
    log "${RED}ERROR: ${1}${RED}"
    failedItem="$(current_branch):${BOOSTER}:\"${1}\""
-   failed+=( ${failedItem} )
+   failed+=( "${failedItem}" )
 }
 
 push_to_remote() {
@@ -539,7 +539,7 @@ do
 
                 log "Done"
                 processedItem="${BRANCH}:${BOOSTER}"
-                processed+=( ${processedItem} )
+                processed+=( "${processedItem}" )
                 echo
             done
         fi
