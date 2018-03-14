@@ -84,8 +84,8 @@ log_ignored() {
 
 log_failed() {
    log "${RED}ERROR: ${1}${RED}"
-   ignoredItem="$(current_branch):${BOOSTER}:\"${1}\""
-   ignored+=( ${ignoredItem} )
+   failedItem="$(current_branch):${BOOSTER}:\"${1}\""
+   failed+=( ${failedItem} )
 }
 
 push_to_remote() {
