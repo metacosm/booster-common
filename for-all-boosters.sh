@@ -1,15 +1,6 @@
 #!/bin/bash
 
 # A script to process boosters
-# TODO:
-#  - Fix top-level option processing that's now broken
-#  - Update launcher catalog in release function
-#  - Refactor compute_version so that it can be used in release function
-#  - Decide on proper variable / function naming style for consistency, identify local / global variables, use local modifier where appropriate
-#  - Improve output of failed / ignored / processed boosters
-#  - Add option to check boosters from git instead of needing a local copy
-#  - Add better / more realistic testing using minishift
-
 set -e
 
 # Defining some colors for output
