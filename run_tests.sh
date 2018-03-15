@@ -22,12 +22,12 @@ do
 
     echo "Running tests of booster ${booster}"
 
-    mvn -q -B clean verify -Popenshift,openshift-it ${MAVEN_EXTRA_OPTS:-''}
+    mvn -q -B clean verify -Popenshift,openshift-it ${MAVEN_EXTRA_OPTS:-}
     if [ $? -eq 0 ]; then
         echo "Successfully tested ${booster}"
     else
         echo "Tests of ${booster} failed"
-        failed += ( ${booster} )
+        failed+=( ${booster} )
     fi
 
     cd ../
