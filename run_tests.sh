@@ -19,12 +19,19 @@ execute_test() {
 
     echo "Running tests of booster ${canonical_name} in ${PWD}"
 
+    oc delete project ${canonical_name} --ignore-not-found=true
+    sleep 10
+    oc new-project ${canonical_name} > /dev/null
     mvn -q -B clean verify -Popenshift,openshift-it ${MAVEN_EXTRA_OPTS:-}
     if [ $? -eq 0 ]; then
         echo "Successfully tested ${canonical_name}"
+        #Delete the project since there is no need to inspect the results when everything is OK
+        oc delete project ${canonical_name}
     else
         echo "Tests of ${canonical_name} failed"
         failed+=( ${canonical_name} )
+
+        #We don't delete the project because it could be needed for a postmortem inspection
     fi
 
     cd ../
@@ -46,4 +53,6 @@ if [ ${#failed[@]} -eq 0 ]; then
     echo "All tests passes"
 else
     echo "The following tests failed: "$(IFS=,; echo "${failed[*]}")
+    echo "Each booster was executed in a dedicated namespace whose name matches the name of the booster"
+    echo "Please inspect the namespace for details of why the tests failed"
 fi
