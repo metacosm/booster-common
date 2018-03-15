@@ -4,12 +4,9 @@
 # ./run_tests.sh branch-name (default is master)
 # Assumes that the user has logged in to the required cluster before executing
 
-branch=${1:-master}
 
-cd $(mktemp -d)
-
-declare -a boosters=( "http" "health-check" "crud" "configmap" "circuit-breaker" )
-declare -a failed=( )
+declare -a boosters_to_test=( "http" "health-check" "crud" "configmap" "circuit-breaker" )
+declare -a failed_tests=( )
 
 execute_test() {
     local canonical_name=$1
@@ -17,7 +14,7 @@ execute_test() {
 
     cd ${git_name}
 
-    echo "Running tests of booster ${canonical_name} in ${PWD}"
+    echo "Running tests of booster ${canonical_name} from directory: ${PWD}"
 
     oc delete project ${canonical_name} --ignore-not-found=true
     sleep 10
@@ -29,7 +26,7 @@ execute_test() {
         oc delete project ${canonical_name}
     else
         echo "Tests of ${canonical_name} failed"
-        failed+=( ${canonical_name} )
+        failed_tests+=( ${canonical_name} )
 
         #We don't delete the project because it could be needed for a postmortem inspection
     fi
@@ -37,22 +34,35 @@ execute_test() {
     cd ../
 }
 
-for booster in "${boosters[@]}"
-do
-    echo "Cloning booster ${booster}"
+execute_all_tests() {
+    pushd $(mktemp -d) > /dev/null
 
-    booster_git_name=spring-boot-${booster}-booster
-    git clone -q -b ${branch} https://github.com/snowdrop/${booster_git_name}
+    local branch=${1:-master}
 
-    execute_test ${booster} ${booster_git_name}
+    for booster in "${boosters_to_test[@]}"
+    do
+        echo "Cloning booster ${booster}"
 
-done
+        booster_git_name=spring-boot-${booster}-booster
+        git clone -q -b ${branch} https://github.com/snowdrop/${booster_git_name}
 
-echo "Done testing"
-if [ ${#failed[@]} -eq 0 ]; then
-    echo "All tests passes"
-else
-    echo "The following tests failed: "$(IFS=,; echo "${failed[*]}")
-    echo "Each booster was executed in a dedicated namespace whose name matches the name of the booster"
-    echo "Please inspect the namespace for details of why the tests failed"
+        execute_test ${booster} ${booster_git_name}
+
+    done
+
+    echo "Done testing"
+    if [ ${#failed_tests[@]} -eq 0 ]; then
+        echo "All tests passes"
+    else
+        echo "The following tests failed: "$(IFS=,; echo "${failed_tests[*]}")
+        echo "Each booster was executed in a dedicated namespace whose name matches the name of the booster"
+        echo "Please inspect the namespace for details of why the tests failed"
+    fi
+
+    popd > /dev/null
+}
+
+# Execute the tests if this script was called directly (i.e. not sourced)
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    execute_all_tests "$@"
 fi
