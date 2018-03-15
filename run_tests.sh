@@ -7,6 +7,7 @@
 
 declare -a boosters_to_test=( "http" "health-check" "crud" "configmap" "circuit-breaker" )
 declare -a failed_tests=( )
+declare -a ignored_tests=( )
 
 execute_test() {
     local canonical_name=$1
@@ -45,18 +46,30 @@ execute_all_tests() {
 
         booster_git_name=spring-boot-${booster}-booster
         git clone -q -b ${branch} https://github.com/snowdrop/${booster_git_name}
-
-        execute_test ${booster} ${booster_git_name}
-
+        if [[ $? -eq 0 ]]; then
+            execute_test ${booster} ${booster_git_name}
+        else
+            ignored_tests+=( ${booster} )
+        fi
     done
 
     echo "Done testing"
-    if [ ${#failed_tests[@]} -eq 0 ]; then
-        echo "All tests passes"
-    else
+
+    non_successful_tests=("${ignored_tests[@]}" "${failed_tests[@]}")
+    successful_tests=(`echo ${boosters_to_test[@]} ${non_successful_tests[@]} | tr ' ' '\n' | sort | uniq -u `)
+
+    if [ ${#ignored_tests[@]} -ne 0 ]; then
+        echo "The following tests were not started: "$(IFS=,; echo "${ignored_tests[*]}")
+    fi
+
+    if [ ${#failed_tests[@]} -ne 0 ]; then
         echo "The following tests failed: "$(IFS=,; echo "${failed_tests[*]}")
         echo "Each booster was executed in a dedicated namespace whose name matches the name of the booster"
         echo "Please inspect the namespace for details of why the tests failed"
+    fi
+
+    if [ ${#successful_tests[@]} -eq ${#boosters_to_test[@]} ]; then
+        echo "All tests executed successfully"
     fi
 
     popd > /dev/null
