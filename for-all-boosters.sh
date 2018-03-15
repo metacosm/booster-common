@@ -341,6 +341,7 @@ show_help () {
     simple_log "    -h                            Display this help message."
     simple_log "    -d                            Toggle dry-run mode: no commits or pushes."
     simple_log "    -f                            Bypass check for local changes, forcing execution if changes exist."
+    simple_log "    -b                            A comma-separated list of branches. For example -b branch1,branch2. Not specifying this results in the usage of $(IFS=,; echo "${default_branches[*]}")"
     simple_log "    release                       Release the boosters."
     simple_log "    create_branch <branch name>   Create a branch."
     simple_log "    delete_branch <branch name>   Delete a branch."
@@ -378,8 +379,11 @@ if [ $# -eq 0 ]; then
     show_help
 fi
 
+readonly default_branches=("master" "redhat")
+branches=("${default_branches[@]}")
+
 # See https://sookocheff.com/post/bash/parsing-bash-script-arguments-with-shopts/
-while getopts ":hdf" opt; do
+while getopts ":hdfb:" opt; do
     case ${opt} in
         h)
             show_help
@@ -395,6 +399,10 @@ while getopts ":hdf" opt; do
             echo -e "${YELLOW}== BYPASSING CHECK FOR LOCAL CHANGES ==${NC}"
             echo
             IGNORE_LOCAL_CHANGES='on'
+        ;;
+        b)
+            IFS=',' read -r -a branches <<< "$OPTARG"
+            echo -e "${YELLOW}== Will use $OPTARG branches instead of the default of $(IFS=,; echo "${default_branches[*]}") ==${NC}"
         ;;
         \?)
             error "Invalid option: -$OPTARG" 1>&2
@@ -503,7 +511,7 @@ do
             ignoredItem="${BOOSTER}:\"${msg}\""
             ignored+=( ${ignoredItem} )
         else
-            for BRANCH in "master" "redhat"
+            for BRANCH in "${branches[@]}"
             do
                 # check if branch exists, otherwise skip booster
                 if ! git show-ref --verify --quiet refs/heads/${BRANCH}; then
