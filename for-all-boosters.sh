@@ -97,7 +97,7 @@ push_to_remote() {
     options=${2:-}
 
     if [[ "$PUSH" == on ]]; then
-        if git push ${options} ${remoteToPushTo} ${currentBranch} > /dev/null; then
+        if git push ${options} "${remoteToPushTo}" "${currentBranch}" > /dev/null; then
             log "Pushed to ${remoteToPushTo}"
         else
             log_ignored "Failed to push to ${remoteToPushTo}"
@@ -193,7 +193,7 @@ change_version() {
                 fi
                 commit ${jira}"Update ${target} version to ${newVersion}"
 
-                push_to_remote ${remote}
+                push_to_remote "${remote}"
             else
                 log_failed "Build failed! Check ${YELLOW}build.log"
                 log "You will need to reset the branch or explicitly set the parent before running this script again."
@@ -206,14 +206,14 @@ change_version() {
         find . -name "*.versionsBackup" -delete
     else
         log_failed "Couldn't set version. Reverting to upstream version."
-        git reset --hard ${remote}/${BRANCH}
+        git reset --hard "${remote}"/"${BRANCH}"
     fi
 }
 
 create_branch() {
     branch=${1:-$BRANCH}
 
-    if git ls-remote --heads ${remote} ${branch} | grep ${branch} > /dev/null;
+    if git ls-remote --heads "${remote}" "${branch}" | grep "${branch}" > /dev/null;
     then
         log_ignored "Branch already exists on remote"
     else
@@ -231,13 +231,13 @@ create_branch() {
 delete_branch() {
     branch=${1:-$BRANCH}
 
-    if element_in ${branch} "${default_branches[@]}"; then
+    if element_in "${branch}" "${default_branches[@]}"; then
         log_failed "Cannot delete protected branch"
         unset branch # unset to avoid side-effects in log
         return 1
     fi
 
-    if git ls-remote --heads ${remote} ${branch} | grep ${branch} > /dev/null;
+    if git ls-remote --heads "${remote}" "${branch}" | grep "${branch}" > /dev/null;
     then
         log "Are you sure you want to delete ${YELLOW}${branch}${BLUE} branch on remote ${YELLOW}upstream${BLUE}?"
         log "Press any key to continue or ctrl-c to abort."
@@ -248,7 +248,7 @@ delete_branch() {
         log_ignored "Branch doesn't exist on remote"
     fi
 
-    if ! git branch -D ${branch} > /dev/null 2> /dev/null;
+    if ! git branch -D "${branch}" > /dev/null 2> /dev/null;
     then
         log_ignored "Branch doesn't exist locally"
     fi
@@ -350,7 +350,7 @@ revert () {
     read answer
     if [ "${answer}" == Y ]; then
         log "Resetting to upstream state"
-        git reset --hard ${remote}/${BRANCH}
+        git reset --hard "${remote}"/"${BRANCH}"
     else
         log "Leaving as-is"
     fi
@@ -546,9 +546,9 @@ do
                         continue
                     fi
 
-                    git fetch -q ${remote} > /dev/null
+                    git fetch -q "${remote}" > /dev/null
 
-                    git checkout -q ${BRANCH} > /dev/null && git rebase ${remote}/${BRANCH} > /dev/null
+                    git checkout -q "${BRANCH}" > /dev/null && git rebase "${remote}"/"${BRANCH}" > /dev/null
                 fi
 
 
