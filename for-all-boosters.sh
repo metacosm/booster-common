@@ -356,6 +356,28 @@ revert () {
     fi
 }
 
+run_tests() {
+    local canonical_name="${BOOSTER}"
+
+    log "Running tests of booster ${canonical_name} from directory: ${PWD}"
+
+    oc delete project ${canonical_name} --ignore-not-found=true
+    sleep 10
+    oc new-project ${canonical_name} > /dev/null
+    mvn -q -B clean verify -Popenshift,openshift-it ${MAVEN_EXTRA_OPTS:-}
+    if [ $? -eq 0 ]; then
+        echo
+        log "Successfully tested ${canonical_name}"
+        #Delete the project since there is no need to inspect the results when everything is OK
+        oc delete project ${canonical_name} > /dev/null
+    else
+        log_failed "Tests of ${canonical_name} failed"
+        log_failed "View can attempt troubleshoot by inspecting the ${canonical_name} namespace"
+
+        #We don't delete the project because it could be needed for a postmortem inspection
+    fi
+}
+
 show_help () {
     simple_log "This scripts executes the given command on all local boosters (identified by the 'spring-boot-*-booster' pattern) found in the current directory."
     simple_log "Usage:"
@@ -370,6 +392,7 @@ show_help () {
     simple_log "    change_version <args>         Change the project or parent version. Run with -h to see help."
     simple_log "    script <path to script>       Run provided script."
     simple_log "    revert                        Revert the booster state to the last remote version."
+    simple_log "    run_tests                     Run the tests. Assumes that the user has logged in to the required cluster before executing"
     simple_log "    cmd <command>                 Execute the provided command."
     echo
 }
@@ -502,6 +525,9 @@ case "$subcommand" in
     revert)
         IGNORE_LOCAL_CHANGES='on'
         cmd="revert"
+    ;;
+    run_tests)
+        cmd="run_tests"
     ;;
     cmd)
         shift
