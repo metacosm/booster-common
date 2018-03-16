@@ -206,6 +206,7 @@ create_branch() {
         if ! git checkout -b ${branch} > /dev/null 2> /dev/null;
         then
             log_failed "Couldn't create branch"
+            unset branch # unset to avoid side-effects in log
             return 1
         fi
     fi
