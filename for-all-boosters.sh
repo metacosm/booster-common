@@ -243,7 +243,7 @@ delete_branch() {
         log "Press any key to continue or ctrl-c to abort."
         read foo
 
-        push_to_remote upstream -d
+        push_to_remote upstream --delete
     else
         log_ignored "Branch doesn't exist on remote"
     fi
