@@ -93,14 +93,14 @@ log_failed() {
 
 push_to_remote() {
     currentBranch=${branch:-$BRANCH}
-    remote=${1:-upstream}
+    local remoteToPushTo=${1}
     options=${2:-}
 
     if [[ "$PUSH" == on ]]; then
-        if git push ${options} ${remote} ${currentBranch} > /dev/null; then
-            log "Pushed to ${remote}"
+        if git push ${options} ${remoteToPushTo} ${currentBranch} > /dev/null; then
+            log "Pushed to ${remoteToPushTo}"
         else
-            log_ignored "Failed to push to ${remote}"
+            log_ignored "Failed to push to ${remoteToPushTo}"
         fi
     fi
     unset currentBranch
@@ -193,7 +193,7 @@ change_version() {
                 fi
                 commit ${jira}"Update ${target} version to ${newVersion}"
 
-                push_to_remote
+                push_to_remote ${remote}
             else
                 log_failed "Build failed! Check ${YELLOW}build.log"
                 log "You will need to reset the branch or explicitly set the parent before running this script again."
@@ -206,14 +206,14 @@ change_version() {
         find . -name "*.versionsBackup" -delete
     else
         log_failed "Couldn't set version. Reverting to upstream version."
-        git reset --hard upstream/${BRANCH}
+        git reset --hard ${remote}/${BRANCH}
     fi
 }
 
 create_branch() {
     branch=${1:-$BRANCH}
 
-    if git ls-remote --heads upstream ${branch} | grep ${branch} > /dev/null;
+    if git ls-remote --heads ${remote} ${branch} | grep ${branch} > /dev/null;
     then
         log_ignored "Branch already exists on remote"
     else
@@ -237,13 +237,13 @@ delete_branch() {
         return 1
     fi
 
-    if git ls-remote --heads upstream ${branch} | grep ${branch} > /dev/null;
+    if git ls-remote --heads ${remote} ${branch} | grep ${branch} > /dev/null;
     then
         log "Are you sure you want to delete ${YELLOW}${branch}${BLUE} branch on remote ${YELLOW}upstream${BLUE}?"
         log "Press any key to continue or ctrl-c to abort."
         read foo
 
-        push_to_remote upstream --delete
+        push_to_remote "${remote}" "--delete"
     else
         log_ignored "Branch doesn't exist on remote"
     fi
@@ -331,7 +331,7 @@ release() {
 
     # switch pushing back on and push
     PUSH='on'
-    push_to_remote "upstream" "--tags"
+    push_to_remote "${remote}" "--tags"
 
     # todo: update launcher catalog instead
     log "Appending new version ${YELLOW}${releaseVersion}${BLUE} to ${YELLOW}${CATALOG_FILE}"
@@ -350,7 +350,7 @@ revert () {
     read answer
     if [ "${answer}" == Y ]; then
         log "Resetting to upstream state"
-        git reset --hard upstream/${BRANCH}
+        git reset --hard ${remote}/${BRANCH}
     else
         log "Leaving as-is"
     fi
@@ -363,6 +363,7 @@ show_help () {
     simple_log "    -d                            Toggle dry-run mode: no commits or pushes."
     simple_log "    -f                            Bypass check for local changes, forcing execution if changes exist."
     simple_log "    -b                            A comma-separated list of branches. For example -b branch1,branch2. Defaults to $(IFS=,; echo "${default_branches[*]}"). Note that this option is mandatory to create / delete branches."
+    simple_log "    -r                            The name of the git remote to use for the boosters, for example upstream or origin. The default value is ${default_remote}"
     simple_log "    release                       Release the boosters."
     simple_log "    create_branch <branch name>   Create a branch."
     simple_log "    delete_branch <branch name>   Delete a branch."
@@ -403,8 +404,11 @@ fi
 readonly default_branches=("master" "redhat")
 branches=("${default_branches[@]}")
 
+readonly default_remote=upstream
+remote=${default_remote}
+
 # See https://sookocheff.com/post/bash/parsing-bash-script-arguments-with-shopts/
-while getopts ":hdfb:" opt; do
+while getopts ":hdfb:r:" opt; do
     case ${opt} in
         h)
             show_help
@@ -424,6 +428,12 @@ while getopts ":hdfb:" opt; do
         b)
             IFS=',' read -r -a branches <<< "$OPTARG"
             echo -e "${YELLOW}== Will use $OPTARG branches instead of the default of $(IFS=,; echo "${default_branches[*]}") ==${NC}"
+            echo
+        ;;
+        r)
+            echo -e "${YELLOW}== Will use $OPTARG as the git remote instead of the default of ${default_remote}==${NC}"
+            echo
+            remote=$OPTARG
         ;;
         \?)
             error "Invalid option: -$OPTARG" 1>&2
@@ -536,10 +546,9 @@ do
                         continue
                     fi
 
-                    # assumes "official" remote is named 'upstream'
-                    git fetch -q upstream > /dev/null
+                    git fetch -q ${remote} > /dev/null
 
-                    git checkout -q ${BRANCH} > /dev/null && git rebase upstream/${BRANCH} > /dev/null
+                    git checkout -q ${BRANCH} > /dev/null && git rebase ${remote}/${BRANCH} > /dev/null
                 fi
 
 
