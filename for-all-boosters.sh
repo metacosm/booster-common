@@ -544,6 +544,7 @@ do
                 # let the command fail without impacting the main loop, let the command decide on what to log / fail / ignore
                 if ! ${cmd}; then
                     log "Done"
+                    echo
                     continue
                 fi
 
