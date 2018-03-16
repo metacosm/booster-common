@@ -141,6 +141,17 @@ compute_new_version() {
     echo ${new_version}
 }
 
+# check that first arg is contained in array second arg
+# see: https://stackoverflow.com/a/8574392
+element_in() {
+    local e match="$1"
+    shift
+    for e; do
+        [[ "$e" == "$match" ]] && return 0;
+    done
+    return 1
+}
+
 change_version() {
     newVersion=${1:-compute}
     targetParent=${2:-false}
@@ -219,6 +230,12 @@ create_branch() {
 
 delete_branch() {
     branch=${1:-$BRANCH}
+
+    if element_in ${branch} "${default_branches[@]}"; then
+        log_failed "Cannot delete protected branch"
+        unset branch # unset to avoid side-effects in log
+        return 1
+    fi
 
     if git ls-remote --heads upstream ${branch} | grep ${branch} > /dev/null;
     then
