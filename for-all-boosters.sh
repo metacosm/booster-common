@@ -51,6 +51,9 @@ COMMIT='on'
 # script-wide toggle to bypass local changes check
 IGNORE_LOCAL_CHANGES='off'
 
+# script-wide toggle to bypass branch existence check, needed to be able to create branches
+CREATE_BRANCH='off'
+
 # failed boosters
 declare -a failed=( )
 
@@ -424,6 +427,7 @@ case "$subcommand" in
         cmd="release"
     ;;
     create_branch)
+        CREATE_BRANCH='on'
         shift
         if [ -n "$1" ]; then
             branch=$1
@@ -515,7 +519,7 @@ do
             for BRANCH in "${branches[@]}"
             do
                 # check if branch exists, otherwise skip booster
-                if ! git show-ref --verify --quiet refs/heads/${BRANCH}; then
+                if [ "$CREATE_BRANCH" != on ] && ! git show-ref --verify --quiet refs/heads/${BRANCH}; then
                     log_ignored "Branch does not exist"
                     continue
                 fi
