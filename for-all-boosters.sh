@@ -353,7 +353,7 @@ show_help () {
 }
 
 show_change_version_help() {
-    simple_log "This command changes the project's (or parent's, if -p flag is set) version"
+    simple_log "change_version command changes the project's (or parent's, if -p flag is set) version"
     simple_log "Usage:"
     simple_log "    -h                            Display this help message."
     simple_log "    -p                            Change parent version instead of project version."
