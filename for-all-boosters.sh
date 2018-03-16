@@ -445,11 +445,9 @@ case "$subcommand" in
     ;;
     create_branch)
         CREATE_BRANCH='on'
-        shift
         cmd="create_branch"
     ;;
     delete_branch)
-        shift
         cmd="delete_branch"
     ;;
     change_version)
