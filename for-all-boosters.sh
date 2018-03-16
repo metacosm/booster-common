@@ -509,7 +509,7 @@ do
             msg="Not under git control"
             echo -e "${MAGENTA}${msg}${MAGENTA}. Ignoring.${NC}"
             ignoredItem="${BOOSTER}:\"${msg}\""
-            ignored+=( ${ignoredItem} )
+            ignored+=( "${ignoredItem}" )
         else
             for BRANCH in "${branches[@]}"
             do
