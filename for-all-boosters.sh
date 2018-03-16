@@ -205,7 +205,7 @@ change_version() {
 
         find . -name "*.versionsBackup" -delete
     else
-        log_failed "Couldn't set version. Reverting to upstream version."
+        log_failed "Couldn't set version. Reverting to remote ${remote} version."
         git reset --hard "${remote}"/"${BRANCH}"
     fi
 }
@@ -239,7 +239,7 @@ delete_branch() {
 
     if git ls-remote --heads "${remote}" "${branch}" | grep "${branch}" > /dev/null;
     then
-        log "Are you sure you want to delete ${YELLOW}${branch}${BLUE} branch on remote ${YELLOW}upstream${BLUE}?"
+        log "Are you sure you want to delete ${YELLOW}${branch}${BLUE} branch on remote ${YELLOW}${remote}${BLUE}?"
         log "Press any key to continue or ctrl-c to abort."
         read foo
 
@@ -344,12 +344,12 @@ revert () {
         git status --porcelain
     fi
 
-    log "Are you sure you want to revert ${YELLOW}${BRANCH}${BLUE} branch to the ${YELLOW}upstream${BLUE} remote state?"
+    log "Are you sure you want to revert ${YELLOW}${BRANCH}${BLUE} branch to the ${YELLOW}${remote}${BLUE} remote state?"
     log "${RED}YOU WILL LOSE ALL UNPUSHED LOCAL COMMITS SO BE CAREFUL!"
     log "Press ${RED}Y to revert${BLUE} or ${YELLOW}any other key to leave the booster as-is."
     read answer
     if [ "${answer}" == Y ]; then
-        log "Resetting to upstream state"
+        log "Resetting to remote ${remote} state"
         git reset --hard "${remote}"/"${BRANCH}"
     else
         log "Leaving as-is"
