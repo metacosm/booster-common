@@ -200,7 +200,7 @@ change_version() {
 }
 
 create_branch() {
-    branch=$1
+    branch=${1:-$BRANCH}
 
     if git ls-remote --heads upstream ${branch} | grep ${branch} > /dev/null;
     then
@@ -218,7 +218,7 @@ create_branch() {
 }
 
 delete_branch() {
-    branch=$1
+    branch=${1:-$BRANCH}
 
     if git ls-remote --heads upstream ${branch} | grep ${branch} > /dev/null;
     then
@@ -345,7 +345,7 @@ show_help () {
     simple_log "    -h                            Display this help message."
     simple_log "    -d                            Toggle dry-run mode: no commits or pushes."
     simple_log "    -f                            Bypass check for local changes, forcing execution if changes exist."
-    simple_log "    -b                            A comma-separated list of branches. For example -b branch1,branch2. Not specifying this results in the usage of $(IFS=,; echo "${default_branches[*]}")"
+    simple_log "    -b                            A comma-separated list of branches. For example -b branch1,branch2. Defaults to $(IFS=,; echo "${default_branches[*]}"). Note that this option is mandatory to create / delete branches."
     simple_log "    release                       Release the boosters."
     simple_log "    create_branch <branch name>   Create a branch."
     simple_log "    delete_branch <branch name>   Delete a branch."
@@ -429,21 +429,11 @@ case "$subcommand" in
     create_branch)
         CREATE_BRANCH='on'
         shift
-        if [ -n "$1" ]; then
-            branch=$1
-            cmd="create_branch ${branch}"
-        else
-            error "Must provide a branch name to create"
-        fi
+        cmd="create_branch"
     ;;
     delete_branch)
         shift
-        if [ -n "$1" ]; then
-            branch=$1
-            cmd="delete_branch ${branch}"
-        else
-            error "Must provide a branch name to delete"
-        fi
+        cmd="delete_branch"
     ;;
     change_version)
         # Needed in order to "reset" the options processing for the subcommand
