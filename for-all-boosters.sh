@@ -367,12 +367,11 @@ run_tests() {
     mvn -q -B clean verify -Popenshift,openshift-it ${MAVEN_EXTRA_OPTS:-}
     if [ $? -eq 0 ]; then
         echo
-        log "Successfully tested ${canonical_name}"
+        log "Successfully tested"
         #Delete the project since there is no need to inspect the results when everything is OK
         oc delete project ${canonical_name} > /dev/null
     else
-        log_failed "Tests of ${canonical_name} failed"
-        log_failed "View can attempt troubleshoot by inspecting the ${canonical_name} namespace"
+        log_failed "Tests failed: inspecting the '${canonical_name}' namespace might provide some insights"
 
         #We don't delete the project because it could be needed for a postmortem inspection
     fi
