@@ -377,6 +377,17 @@ run_tests() {
     fi
 }
 
+run_smoke_tests() {
+    log "Running tests of booster from directory: ${PWD}"
+    mvn -q -B clean verify ${MAVEN_EXTRA_OPTS:-}
+    if [ $? -eq 0 ]; then
+        log "Successfully tested"
+    else
+        log_failed "Tests failed"
+    fi
+
+}
+
 show_help () {
     simple_log "This scripts executes the given command on all local boosters (identified by the 'spring-boot-*-booster' pattern) found in the current directory."
     simple_log "Usage:"
@@ -393,9 +404,7 @@ show_help () {
     simple_log "    revert                        Revert the booster state to the last remote version."
     simple_log "    run_tests                     Run the integration tests on an OpenShift cluster. Requires to be logged in to the required cluster before executing"
     simple_log "    script <path to script>       Run provided script."
-    simple_log "    revert                        Revert the booster state to the last remote version."
-    simple_log "    run_tests                     Run the tests. Assumes that the user has logged in to the required cluster before executing"
-    simple_log "    cmd <command>                 Execute the provided command."
+    simple_log "    smoke_tests                   Run the unit tests locally."
     echo
 }
 
@@ -530,6 +539,9 @@ case "$subcommand" in
     ;;
     run_tests)
         cmd="run_tests"
+    ;;
+    smoke_tests)
+        cmd="run_smoke_tests"
     ;;
     cmd)
         shift
