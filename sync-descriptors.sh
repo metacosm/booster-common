@@ -91,7 +91,7 @@ done
 
 git commit -m "Updated YAML files based on $1 branch"
 
-if ((${HAS_SUB_MODULES} == 0)); then
+if ((HAS_SUB_MODULES == 0)); then
     echo -e "${BLUE}Pushing to ${YELLOW}${GIT_BRANCH}${BLUE} branch of ${YELLOW}${GIT_REMOTE}${BLUE} remote${NC}"
     git push $GIT_REMOTE $GIT_BRANCH
 else
