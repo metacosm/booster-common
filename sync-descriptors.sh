@@ -6,21 +6,21 @@ NC='\033[0m' # No Color
 YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
 
-CURRENT_DIR=`pwd`
+CURRENT_DIR=$(pwd)
 
 if [ -z "$1" ]; then
     echo -e "${RED}You must provide a branch name from which descriptor changes will be applied to the current branch${NC}"
     exit 1
 fi
 
-if ((`git status -sb | wc -l` != 1)); then
+if (($(git status -sb | wc -l) != 1)); then
     echo -e "${RED}You have uncommitted changes, please check (and stash) these changes before running this script${NC}"
     exit 1
 fi
 
 
 HAS_SUB_MODULES=0
-if ((`find . -name "pom.xml" | wc -l` > 1)); then
+if (($(find . -name "pom.xml" | wc -l) > 1)); then
     HAS_SUB_MODULES=1
     echo -e "${YELLOW}/!\/!\/!\ You have submodules, this script might not work properly. Changes will thus not be pushed automatically so you can review them first.${NC}"
     echo ""
@@ -29,7 +29,7 @@ fi
 
 # check that we have proper git information to automatically commit and push
 # git status -sb has the following format: ## master...upstream/master when tracking a remote branch
-GIT_STATUS=`git status -sb`
+GIT_STATUS=$(git status -sb)
 GIT_STATUS_PARTS=${GIT_STATUS//##/}
 GIT_STATUS_PARTS=(${GIT_STATUS_PARTS//.../ })
 GIT_BRANCH=${GIT_STATUS_PARTS[0]}
@@ -41,7 +41,7 @@ fi
 GIT_REMOTE=${GIT_REMOTE[0]}
 GIT_BRANCH=${GIT_REMOTE[1]}
 
-if ((`git branch --list -r "${GIT_REMOTE}/${1}" | wc -l` != 1)); then
+if (($(git branch --list -r "${GIT_REMOTE}/${1}" | wc -l) != 1)); then
     echo -e "${YELLOW}${GIT_REMOTE}/${1}${RED} does not exist. Please check the origin name and try again.${NC}"
     exit 1
 fi
@@ -51,10 +51,10 @@ echo -e "${BLUE}Cloned ${YELLOW}${REMOTE}${BLUE} repository and checked out ${YE
 rm -rf /tmp/yaml-sync && git clone -q "${REMOTE}" /tmp/yaml-sync
 pushd /tmp/yaml-sync
 git checkout $1
-NEW_YAML_FILES=(`find . -name "*.yaml"`)
+NEW_YAML_FILES=($(find . -name "*.yaml"))
 popd
 
-for FILE in `find . -name "*.yaml"`
+for FILE in $(find . -name "*.yaml")
 do
     git rm $FILE
 done
