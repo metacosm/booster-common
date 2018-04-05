@@ -21,7 +21,7 @@ simple_log () {
 # ====
 create_auto_deleted_temp_dir() (
 
-    WORK_DIR=`mktemp -d`
+    WORK_DIR=$(mktemp -d)
     simple_log "Created temp working directory $WORK_DIR"
 
 # check if tmp dir was created
@@ -65,7 +65,7 @@ declare -a processed=( )
 
 evaluate_mvn_expr() {
     # Evaluate the given maven expression, cf: https://stackoverflow.com/questions/3545292/how-to-get-maven-project-version-to-the-bash-command-line
-    result=`mvn -q -Dexec.executable="echo" -Dexec.args='${'${1}'}' --non-recursive exec:exec`
+    result=$(mvn -q -Dexec.executable="echo" -Dexec.args='${'${1}'}' --non-recursive exec:exec)
     echo ${result}
 }
 
@@ -179,7 +179,7 @@ change_version() {
     
     if eval ${cmd}; then
         # Only attempt committing if we have changes otherwise the script will exit
-        if [[ `git status --porcelain` ]]; then
+        if [[ $(git status --porcelain) ]]; then
             log "Updated ${target} from ${YELLOW}${currentVersion}${BLUE} to ${YELLOW}${newVersion}"
             log "Running verification build"
             if mvn clean verify > build.log; then
@@ -298,7 +298,7 @@ release() {
             sed -i '' -e "s/BOOSTER_VERSION/${releaseVersion}/g" ${file}
             log "${YELLOW}${file}${BLUE}: Replaced BOOSTER_VERSION token by ${releaseVersion}"
         done
-        if [[ `git status --porcelain` ]]; then
+        if [[ $(git status --porcelain) ]]; then
             commit "Replaced templates placeholders: RUNTIME_VERSION -> ${runtime}, BOOSTER_VERSION -> ${releaseVersion}"
         else
             # if no changes were made it means that templates don't contain tokens and should be fixed
@@ -339,7 +339,7 @@ release() {
 }
 
 revert () {
-    if [[ `git status --porcelain` ]]; then
+    if [[ $(git status --porcelain) ]]; then
         log "${RED}DANGER: YOU HAVE UNCOMMITTED CHANGES:"
         git status --porcelain
     fi
@@ -480,7 +480,7 @@ subcommand=$1
 cmd=""
 case "$subcommand" in
     release)
-        CURRENT_DIR=`pwd`
+        CURRENT_DIR=$(pwd)
         CATALOG_FILE=$CURRENT_DIR"/booster-catalog-versions.txt"
         rm -f "$CATALOG_FILE"
         touch "$CATALOG_FILE"
@@ -581,7 +581,7 @@ do
 
                 if [ "$IGNORE_LOCAL_CHANGES" != on ]; then
                     # if booster has uncommitted changes, skip it
-                    if [[ `git status --porcelain` ]]; then
+                    if [[ $(git status --porcelain) ]]; then
                         log_ignored "You have uncommitted changes, please stash these changes"
                         continue
                     fi
