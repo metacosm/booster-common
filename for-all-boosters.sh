@@ -128,13 +128,13 @@ compute_new_version() {
 
     if [[ "$snapshot" == SNAPSHOT ]]
     then
-        new_version="${sb_version}-$(($version_int +1))-${qualifier}-${snapshot}"
+        new_version="${sb_version}-$((version_int +1))-${qualifier}-${snapshot}"
     else
         if [ -n "${qualifier}" ]
         then
-            new_version="${sb_version}-$(($version_int +1))-${qualifier}"
+            new_version="${sb_version}-$((version_int +1))-${qualifier}"
         else
-            new_version="${sb_version}-$(($version_int +1))"
+            new_version="${sb_version}-$((version_int +1))"
         fi
     fi
 
