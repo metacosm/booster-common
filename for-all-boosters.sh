@@ -400,6 +400,7 @@ show_help () {
     simple_log "    delete_branch <branch name>   Delete a branch."
     simple_log "    change_version <args>         Change the project or parent version. Run with -h to see help."
     simple_log "    cmd <command>                 Execute the provided command."
+    simple_log "    fn <function name>            Execute the specified function. This allows to call internal functions. Make sure you know what you're doing!"
     simple_log "    release                       Release the boosters."
     simple_log "    revert                        Revert the booster state to the last remote version."
     simple_log "    run_tests                     Run the integration tests on an OpenShift cluster. Requires to be logged in to the required cluster before executing"
@@ -549,6 +550,16 @@ case "$subcommand" in
             cmd="$1"
         else
             error "Must provide a command to execute"
+        fi
+    ;;
+    fn)
+        shift
+        if [ -n "$1" ]; then
+            cmd="$1" # record command name
+            shift # remove command name from args
+            cmd="${cmd} $@" # append args
+        else
+            error "Must provide a function to execute"
         fi
     ;;
     *)
