@@ -462,11 +462,11 @@ while getopts ":hdfb:r:" opt; do
         ;;
         b)
             IFS=',' read -r -a branches <<< "$OPTARG"
-            echo -e "${YELLOW}== Will use $OPTARG branches instead of the default of $(IFS=,; echo "${default_branches[*]}") ==${NC}"
+            echo -e "${YELLOW}== Will use '${BLUE}$OPTARG${YELLOW}' branche(s) instead of the default ${BLUE}'$(IFS=,; echo "${default_branches[*]}")${YELLOW}' ==${NC}"
             echo
         ;;
         r)
-            echo -e "${YELLOW}== Will use $OPTARG as the git remote instead of the default of ${default_remote}==${NC}"
+            echo -e "${YELLOW}== Will use '${BLUE}$OPTARG${YELLOW}' as the git remote instead of the default of ${BLUE}'${default_remote}${YELLOW}' ==${NC}"
             echo
             remote=$OPTARG
         ;;
