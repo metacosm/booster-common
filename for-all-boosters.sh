@@ -413,7 +413,7 @@ show_change_version_help() {
     simple_log "change_version command changes the project's (or parent's, if -p flag is set) version"
     simple_log "Usage:"
     simple_log "    -h                            Display this help message."
-    simple_log "    -p                            Change parent version instead of project version."
+    simple_log "    -p                            Optional: change parent version instead of project version."
     simple_log "    -v <version name>             Optional: specify which version to use. Version is computed otherwise."
     simple_log "    -m <commit prefix>            Optional: specify a commit message prefix (e.g. JIRA / github ticket number) to prepend to commit messages. Empty otherwise."
 }
