@@ -600,6 +600,8 @@ do
                     git fetch -q "${remote}" > /dev/null
 
                     git checkout -q "${BRANCH}" > /dev/null && git rebase "${remote}"/"${BRANCH}" > /dev/null
+                else
+                    git checkout -q "${BRANCH}" > /dev/null
                 fi
 
 
