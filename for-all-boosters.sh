@@ -63,9 +63,17 @@ declare -a ignored=( )
 # processed boosters
 declare -a processed=( )
 
+maven_settings() {
+    if [[ -z "${MAVEN_SETTINGS}" ]]; then
+      echo ""
+    else
+      echo " --settings ${MAVEN_SETTINGS} "
+    fi
+}
+
 evaluate_mvn_expr() {
     # Evaluate the given maven expression, cf: https://stackoverflow.com/questions/3545292/how-to-get-maven-project-version-to-the-bash-command-line
-    result=$(mvn -q -Dexec.executable="echo" -Dexec.args='${'${1}'}' --non-recursive exec:exec)
+    result=$(mvn $(maven_settings) -q -Dexec.executable="echo" -Dexec.args='${'${1}'}' --non-recursive exec:exec)
     echo ${result}
 }
 
@@ -170,7 +178,7 @@ change_version() {
     fi
 
     currentVersion=$(evaluate_mvn_expr ${expr})
-    local cmd="mvn versions:set -DnewVersion=${newVersion} > /dev/null"
+    local cmd="mvn $(maven_settings) versions:set -DnewVersion=${newVersion} > /dev/null"
     if [ "${targetParent}" == true ]; then
         local escapedCurrent=$(sed 's|[]\/$*.^[]|\\&|g' <<< ${currentVersion})
         # see: https://unix.stackexchange.com/a/92907
@@ -182,7 +190,7 @@ change_version() {
         if [[ $(git status --porcelain) ]]; then
             log "Updated ${target} from ${YELLOW}${currentVersion}${BLUE} to ${YELLOW}${newVersion}"
             log "Running verification build"
-            if mvn clean verify > build.log; then
+            if mvn $(maven_settings) clean verify > build.log; then
                 log "Build ${YELLOW}OK"
                 rm build.log
 
@@ -369,7 +377,7 @@ run_tests() {
     oc delete project ${canonical_name} --ignore-not-found=true
     sleep 10
     oc new-project ${canonical_name} > /dev/null
-    mvn -q -B clean verify -Popenshift,openshift-it ${MAVEN_EXTRA_OPTS:-}
+    mvn $(maven_settings) -q -B clean verify -Popenshift,openshift-it ${MAVEN_EXTRA_OPTS:-}
     if [ $? -eq 0 ]; then
         echo
         log "Successfully tested"
@@ -384,7 +392,7 @@ run_tests() {
 
 run_smoke_tests() {
     log "Running tests of booster from directory: ${PWD}"
-    mvn -q -B clean verify ${MAVEN_EXTRA_OPTS:-}
+    mvn $(maven_settings) -q -B clean verify ${MAVEN_EXTRA_OPTS:-}
     if [ $? -eq 0 ]; then
         log "Successfully tested"
     else
