@@ -462,7 +462,7 @@ while getopts ":hdfb:r:" opt; do
         ;;
         b)
             IFS=',' read -r -a branches <<< "$OPTARG"
-            echo -e "${YELLOW}== Will use '${BLUE}$OPTARG${YELLOW}' branche(s) instead of the default ${BLUE}'$(IFS=,; echo "${default_branches[*]}")${YELLOW}' ==${NC}"
+            echo -e "${YELLOW}== Will use '${BLUE}$OPTARG${YELLOW}' branch(es) instead of the default ${BLUE}'$(IFS=,; echo "${default_branches[*]}")${YELLOW}' ==${NC}"
             echo
         ;;
         r)
