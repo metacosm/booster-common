@@ -351,6 +351,7 @@ revert () {
     if [ "${answer}" == Y ]; then
         log "Resetting to remote ${remote} state"
         git reset --hard "${remote}"/"${BRANCH}"
+        git clean -f -d
     else
         log "Leaving as-is"
     fi
