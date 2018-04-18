@@ -292,11 +292,13 @@ release() {
     if [ ${#templates[@]} != 0 ]; then
         for file in ${templates[@]}
         do
-            sed -i '' -e "s/RUNTIME_VERSION/${runtime}/g" ${file}
+            sed -i.bak -e "s/RUNTIME_VERSION/${runtime}/g" ${file}
             log "${YELLOW}${file}${BLUE}: Replaced RUNTIME_VERSION token by ${runtime}"
 
-            sed -i '' -e "s/BOOSTER_VERSION/${releaseVersion}/g" ${file}
+            sed -i.bak -e "s/BOOSTER_VERSION/${releaseVersion}/g" ${file}
             log "${YELLOW}${file}${BLUE}: Replaced BOOSTER_VERSION token by ${releaseVersion}"
+
+            rm ${file}.bak
         done
         if [[ $(git status --porcelain) ]]; then
             commit "Replaced templates placeholders: RUNTIME_VERSION -> ${runtime}, BOOSTER_VERSION -> ${releaseVersion}"
@@ -318,11 +320,13 @@ release() {
         # restore template placeholders
         for file in ${templates[@]}
         do
-            sed -i '' -e "s/${runtime}/RUNTIME_VERSION/g" ${file}
+            sed -i.bak -e "s/${runtime}/RUNTIME_VERSION/g" ${file}
             log "${YELLOW}${file}${BLUE}: Restored RUNTIME_VERSION token"
 
-            sed -i '' -e "s/${releaseVersion}/BOOSTER_VERSION/g" ${file}
+            sed -i.bak -e "s/${releaseVersion}/BOOSTER_VERSION/g" ${file}
             log "${YELLOW}${file}${BLUE}: Restored BOOSTER_VERSION token"
+
+            rm ${file}.bak
         done
         commit "Restored templates placeholders: ${runtime} -> RUNTIME_VERSION, ${releaseVersion} -> BOOSTER_VERSION"
     fi
