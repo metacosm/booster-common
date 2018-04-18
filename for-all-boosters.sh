@@ -392,7 +392,7 @@ show_help () {
     simple_log "This scripts executes the given command on all local boosters (identified by the 'spring-boot-*-booster' pattern) found in the current directory."
     simple_log "Usage:"
     simple_log "    -h                            Display this help message."
-    simple_log "    -d                            Toggle dry-run mode: no commits or pushes."
+    simple_log "    -d                            Toggle dry-run mode: no commits or pushes. This operation is not compatible with the release command"
     simple_log "    -f                            Bypass check for local changes, forcing execution if changes exist."
     simple_log "    -b                            A comma-separated list of branches. For example -b branch1,branch2. Defaults to $(IFS=,; echo "${default_branches[*]}"). Note that this option is mandatory to create / delete branches."
     simple_log "    -r                            The name of the git remote to use for the boosters, for example upstream or origin. The default value is ${default_remote}"
@@ -481,6 +481,11 @@ subcommand=$1
 cmd=""
 case "$subcommand" in
     release)
+        if [[ "$COMMIT" == off ]]; then
+            log_failed "The dry-run option is not supported for the release command"
+            exit 1
+        fi
+
         CURRENT_DIR=$(pwd)
         CATALOG_FILE=$CURRENT_DIR"/booster-catalog-versions.txt"
         rm -f "$CATALOG_FILE"
