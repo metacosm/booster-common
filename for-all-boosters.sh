@@ -322,7 +322,7 @@ release() {
 
     fi
 
-    runtime=${1:-'1.2-7'}
+    runtime=${1:-'1.3-5'}
     
     # replace template placeholders if they exist
     templates=($(find . -name "application.yaml"))
