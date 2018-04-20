@@ -438,6 +438,7 @@ show_help () {
     simple_log "    -b                            A comma-separated list of branches. For example -b branch1,branch2. Defaults to $(IFS=,; echo "${default_branches[*]}"). Note that this option is mandatory to create / delete branches."
     simple_log "    -r                            The name of the git remote to use for the boosters, for example upstream or origin. The default value is ${default_remote}"
     simple_log "    -n                            Skip confirmation dialogs"
+    simple_log "    -m                            The boosters to operate on (comma separated value). The name of each booster can either be the full booster name, or the simple booster name (for example: circuit-breaker) Not selecting this option means that all boosters will be operated on."
     simple_log "    create_branch <branch name>   Create a branch."
     simple_log "    delete_branch <branch name>   Delete a branch."
     simple_log "    change_version <args>         Change the project or parent version. Run with -h to see help."
@@ -468,8 +469,8 @@ error() {
 }
 
 
-boosters=( $(find . -name "spring-boot-*-booster" -type d -exec basename {} \; | sort))
-if [ ${#boosters[@]} == 0 ]; then
+all_boosters=( $(find . -name "spring-boot-*-booster" -type d -exec basename {} \; | sort))
+if [ ${#all_boosters[@]} == 0 ]; then
     echo -e "${RED}No boosters named spring-boot-*-booster could be found in $(pwd)${NC}"
     exit 1
 fi
@@ -484,8 +485,10 @@ branches=("${default_branches[@]}")
 readonly default_remote=upstream
 remote=${default_remote}
 
+declare -a explicitly_selected_boosters=( )
+
 # See https://sookocheff.com/post/bash/parsing-bash-script-arguments-with-shopts/
-while getopts ":hdnfb:r:" opt; do
+while getopts ":hdnfb:r:m:" opt; do
     case ${opt} in
         h)
             show_help
@@ -516,6 +519,11 @@ while getopts ":hdnfb:r:" opt; do
             echo -e "${YELLOW}== SKIP CONFIRMATION DIALOGS ACTIVATED: no confirmation will be requested from the user for any potentially destructive operations ==${NC}"
             echo
             CONFIRMATION_NEEDED='off'
+        ;;
+        m)
+            IFS=',' read -r -a explicitly_selected_boosters <<< "$OPTARG"
+            echo -e "${YELLOW}== Will use '${BLUE}$OPTARG${YELLOW}' booster(s) ==${NC}"
+            echo
         ;;
         \?)
             error "Invalid option: -$OPTARG" 1>&2
@@ -620,66 +628,76 @@ case "$subcommand" in
 esac
 
 
-for BOOSTER in ${boosters[@]}
+for BOOSTER in ${all_boosters[@]}
 do
-    #if [ "$BOOSTER" != spring-boot-circuit-breaker-booster ] && [ "$BOOSTER" != spring-boot-configmap-booster ] && [ "$BOOSTER" != spring-boot-crud-booster ]; then
-    if true; then
-        pushd ${BOOSTER} > /dev/null
+    if [[ ${BOOSTER} =~ spring-boot-(.*)-booster ]]; then #this will always be true, but is used in order to capture the simple name
+        booster_simple_name=${BASH_REMATCH[1]}
 
-        echo -e "${BLUE}> ${YELLOW}${BOOSTER}${BLUE}${NC}"
+        # The following matches if no explicit boosters have been set
+        # or if the simple booster name (meaning the part without 'spring-boot-' and '-booster')
+        # matches one of the explicitly selected boosters
+        # For example if the explicitly selected boosters are circuit-breaker and http then
+        # then spring-boot-circuit-breaker-booster would match,
+        # while spring-boot-crud-booster would not
+        if [ ${#explicitly_selected_boosters[@]} -eq 0 ] || [[ "${explicitly_selected_boosters[@]}" =~ "${booster_simple_name}" ]]; then
+          pushd ${BOOSTER} > /dev/null
 
-        if [ ! -d .git ]; then
-            msg="Not under git control"
-            echo -e "${MAGENTA}${msg}${MAGENTA}. Ignoring.${NC}"
-            ignoredItem="${BOOSTER}:\"${msg}\""
-            ignored+=( "${ignoredItem}" )
-        else
-            for BRANCH in "${branches[@]}"
-            do
-                # check if branch exists, otherwise skip booster
-                if [ "$CREATE_BRANCH" != on ] && ! git show-ref --verify --quiet refs/heads/${BRANCH}; then
-                    log_ignored "Branch does not exist"
-                    continue
-                fi
+          echo -e "${BLUE}> ${YELLOW}${BOOSTER}${BLUE}${NC}"
 
-                if [ "$IGNORE_LOCAL_CHANGES" != on ]; then
-                    # if booster has uncommitted changes, skip it
-                    if [[ $(git status --porcelain) ]]; then
-                        log_ignored "You have uncommitted changes, please stash these changes"
-                        continue
-                    fi
+          if [ ! -d .git ]; then
+              msg="Not under git control"
+              echo -e "${MAGENTA}${msg}${MAGENTA}. Ignoring.${NC}"
+              ignoredItem="${BOOSTER}:\"${msg}\""
+              ignored+=( "${ignoredItem}" )
+          else
+              for BRANCH in "${branches[@]}"
+              do
+                  # check if branch exists, otherwise skip booster
+                  if [ "$CREATE_BRANCH" != on ] && ! git show-ref --verify --quiet refs/heads/${BRANCH}; then
+                      log_ignored "Branch does not exist"
+                      continue
+                  fi
 
-                    git fetch -q "${remote}" > /dev/null
+                  if [ "$IGNORE_LOCAL_CHANGES" != on ]; then
+                      # if booster has uncommitted changes, skip it
+                      if [[ $(git status --porcelain) ]]; then
+                          log_ignored "You have uncommitted changes, please stash these changes"
+                          continue
+                      fi
 
-                    git checkout -q "${BRANCH}" > /dev/null && git rebase "${remote}"/"${BRANCH}" > /dev/null
-                else
-                    git checkout -q "${BRANCH}" > /dev/null
-                fi
+                      git fetch -q "${remote}" > /dev/null
+
+                      git checkout -q "${BRANCH}" > /dev/null && git rebase "${remote}"/"${BRANCH}" > /dev/null
+                  else
+                      git checkout -q "${BRANCH}" > /dev/null
+                  fi
 
 
-                # if we need to replace a multi-line match in the pom file of each booster, for example:
-                # perl -pi -e 'undef $/; s/<properties>\s*<\/properties>/replacement/' pom.xml
+                  # if we need to replace a multi-line match in the pom file of each booster, for example:
+                  # perl -pi -e 'undef $/; s/<properties>\s*<\/properties>/replacement/' pom.xml
 
-                # if we need to execute sed on the result of find:
-                # find . -name "application.yaml" -exec sed -i '' -e "s/provider: fabric8/provider: snowdrop/g" {} +
+                  # if we need to execute sed on the result of find:
+                  # find . -name "application.yaml" -exec sed -i '' -e "s/provider: fabric8/provider: snowdrop/g" {} +
 
-                log "Executing '${YELLOW}${cmd}${BLUE}'"
-                # let the command fail without impacting the main loop, let the command decide on what to log / fail / ignore
-                if ! ${cmd}; then
-                    log "Done"
-                    echo
-                    continue
-                fi
+                  log "Executing '${YELLOW}${cmd}${BLUE}'"
+                  # let the command fail without impacting the main loop, let the command decide on what to log / fail / ignore
+                  if ! ${cmd}; then
+                      log "Done"
+                      echo
+                      continue
+                  fi
 
-                log "Done"
-                processedItem="${BRANCH}:${BOOSTER}"
-                processed+=( "${processedItem}" )
-                echo
-            done
+                  log "Done"
+                  processedItem="${BRANCH}:${BOOSTER}"
+                  processed+=( "${processedItem}" )
+                  echo
+              done
+          fi
+
+          echo -e "----------------------------------------------------------------------------------------\n"
+          popd > /dev/null
+
         fi
-
-        echo -e "----------------------------------------------------------------------------------------\n"
-        popd > /dev/null
     fi
 done
 
