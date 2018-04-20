@@ -164,14 +164,21 @@ verify_maven_project_setup() {
     mvn $(maven_settings) dependency:analyze > /dev/null
     if [ $? -ne 0 ]; then
       log_failed "Unable to verify that the booster was setup correctly locally - some dependencies seem to be missing"
-      exit 1 # Definitely not the optimal solution, but if were to properly handle failures, they would need to propagated all the way up to the booster loop
+      # Definitely not the optimal solution for handling errors
+      # If we were however to do proper error handling for each booster / branch combination
+      # we would need to propagate errors (and perhaps the error types) all the way up the call stack
+      # to the main booster / branch control loop
+      exit 1
     fi
 }
 
 change_version() {
-    # The first thing we do is to make sure the project's dependencies are valid
-    # If they aren't then maven reports errors and it's the subsequent process
-    # that checks for the existing version will fail without a clear indication of what happened
+    # The first thing we do is make sure the project's dependencies are valid
+    # This is done because if it were not,
+    # the change_version function would try to interpret the Maven errors as a Maven version
+    # resulting in weird behavior for code that uses the results of changes_version
+    # The final error messages that are printed in the console do not provide the user of the script
+    # with a clear indication of what went wrong
     verify_maven_project_setup
 
     newVersion=${1:-compute}
