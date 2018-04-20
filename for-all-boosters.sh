@@ -160,7 +160,20 @@ element_in() {
     return 1
 }
 
+verify_maven_project_setup() {
+    mvn $(maven_settings) dependency:analyze > /dev/null
+    if [ $? -ne 0 ]; then
+      log_failed "Unable to verify that the booster was setup correctly locally - some dependencies seem to be missing"
+      exit 1 # Definitely not the optimal solution, but if were to properly handle failures, they would need to propagated all the way up to the booster loop
+    fi
+}
+
 change_version() {
+    # The first thing we do is to make sure the project's dependencies are valid
+    # If they aren't then maven reports errors and it's the subsequent process
+    # that checks for the existing version will fail without a clear indication of what happened
+    verify_maven_project_setup
+
     newVersion=${1:-compute}
     targetParent=${2:-false}
 
