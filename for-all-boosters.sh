@@ -225,6 +225,12 @@ change_version() {
                 commit ${jira}"Update ${target} version to ${newVersion}"
 
                 push_to_remote "${remote}"
+
+                # When dry-run is enabled, revert local changes in order leave things the way we found them :)
+                if [[ "$COMMIT" == off ]]; then
+                  CONFIRMATION_NEEDED='off'
+                  revert
+                fi
             else
                 log_failed "Build failed! Check ${YELLOW}build.log"
                 log "You will need to reset the branch or explicitly set the parent before running this script again."
