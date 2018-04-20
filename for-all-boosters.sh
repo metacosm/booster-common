@@ -54,6 +54,9 @@ IGNORE_LOCAL_CHANGES='off'
 # script-wide toggle to bypass branch existence check, needed to be able to create branches
 CREATE_BRANCH='off'
 
+# script-wide toggle to controlling whether input-confirmation will be shown or not
+CONFIRMATION_NEEDED='on'
+
 # failed boosters
 declare -a failed=( )
 
@@ -356,10 +359,15 @@ revert () {
         git status --porcelain
     fi
 
-    log "Are you sure you want to revert ${YELLOW}${BRANCH}${BLUE} branch to the ${YELLOW}${remote}${BLUE} remote state?"
-    log "${RED}YOU WILL LOSE ALL UNPUSHED LOCAL COMMITS SO BE CAREFUL!"
-    log "Press ${RED}Y to revert${BLUE} or ${YELLOW}any other key to leave the booster as-is."
-    read answer
+    if [[ "$CONFIRMATION_NEEDED" == on ]]; then
+      log "Are you sure you want to revert ${YELLOW}${BRANCH}${BLUE} branch to the ${YELLOW}${remote}${BLUE} remote state?"
+      log "${RED}YOU WILL LOSE ALL UNPUSHED LOCAL COMMITS SO BE CAREFUL!"
+      log "Press ${RED}Y to revert${BLUE} or ${YELLOW}any other key to leave the booster as-is."
+      read answer
+    else
+      answer='Y'
+    fi
+
     if [ "${answer}" == Y ]; then
         log "Resetting to remote ${remote} state"
         git reset --hard "${remote}"/"${BRANCH}"
@@ -409,6 +417,7 @@ show_help () {
     simple_log "    -f                            Bypass check for local changes, forcing execution if changes exist."
     simple_log "    -b                            A comma-separated list of branches. For example -b branch1,branch2. Defaults to $(IFS=,; echo "${default_branches[*]}"). Note that this option is mandatory to create / delete branches."
     simple_log "    -r                            The name of the git remote to use for the boosters, for example upstream or origin. The default value is ${default_remote}"
+    simple_log "    -n                            Skip confirmation dialogs"
     simple_log "    create_branch <branch name>   Create a branch."
     simple_log "    delete_branch <branch name>   Delete a branch."
     simple_log "    change_version <args>         Change the project or parent version. Run with -h to see help."
@@ -456,7 +465,7 @@ readonly default_remote=upstream
 remote=${default_remote}
 
 # See https://sookocheff.com/post/bash/parsing-bash-script-arguments-with-shopts/
-while getopts ":hdfb:r:" opt; do
+while getopts ":hdnfb:r:" opt; do
     case ${opt} in
         h)
             show_help
@@ -482,6 +491,11 @@ while getopts ":hdfb:r:" opt; do
             echo -e "${YELLOW}== Will use '${BLUE}$OPTARG${YELLOW}' as the git remote instead of the default of ${BLUE}'${default_remote}${YELLOW}' ==${NC}"
             echo
             remote=$OPTARG
+        ;;
+        n)
+            echo -e "${YELLOW}== SKIP CONFIRMATION DIALOGS ACTIVATED: no confirmation will be requested from the user for any potentially destructive operations ==${NC}"
+            echo
+            CONFIRMATION_NEEDED='off'
         ;;
         \?)
             error "Invalid option: -$OPTARG" 1>&2
