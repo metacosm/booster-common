@@ -385,6 +385,7 @@ revert () {
         git status --porcelain
     fi
 
+    local answer='N'
     if [[ "$CONFIRMATION_NEEDED" == on ]]; then
       log "Are you sure you want to revert ${YELLOW}${BRANCH}${BLUE} branch to the ${YELLOW}${remote}${BLUE} remote state?"
       log "${RED}YOU WILL LOSE ALL UNPUSHED LOCAL COMMITS SO BE CAREFUL!"
