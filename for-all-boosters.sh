@@ -57,6 +57,9 @@ CREATE_BRANCH='off'
 # script-wide toggle to controlling whether input-confirmation will be shown or not
 CONFIRMATION_NEEDED='on'
 
+# boosters directory (where all the local booster copies are located), defaults to working dir
+BOOSTERS_DIR=$(pwd)
+
 # failed boosters
 declare -a failed=( )
 
@@ -443,6 +446,7 @@ show_help () {
     simple_log "    -d                            Toggle dry-run mode: no commits or pushes. This operation is not compatible with the release command"
     simple_log "    -f                            Bypass check for local changes, forcing execution if changes exist."
     simple_log "    -h                            Display this help message."
+    simple_log "    -l                            Specify where the local copies of the boosters should be found. Defaults to current working directory."
     simple_log "    -m                            The boosters to operate on (comma separated value). The name of each booster can either be the full booster name, or the simple booster name (for example: circuit-breaker) Not selecting this option means that all boosters will be operated on."
     simple_log "    -n                            Skip confirmation dialogs"
     simple_log "    -r                            The name of the git remote to use for the boosters, for example upstream or origin. The default value is ${default_remote}"
@@ -451,7 +455,7 @@ show_help () {
     simple_log "    run_tests                     Run the integration tests on an OpenShift cluster. Requires to be logged in to the required cluster before executing"
     simple_log "    create_branch <branch name>   Create a branch."
     simple_log "    delete_branch <branch name>   Delete a branch."
-    simple_log "    cmd <command>                 Execute the provided command."
+    simple_log "    cmd <command>                 Execute the provided shell command."
     simple_log "    fn <function name>            Execute the specified function. This allows to call internal functions. Make sure you know what you're doing!"
     simple_log "    revert                        Revert the booster state to the last remote version."
     simple_log "    script <path to script>       Run provided script."
@@ -476,12 +480,6 @@ error() {
 }
 
 
-all_boosters=( $(find . -name "spring-boot-*-booster" -type d -exec basename {} \; | sort))
-if [ ${#all_boosters[@]} == 0 ]; then
-    echo -e "${RED}No boosters named spring-boot-*-booster could be found in $(pwd)${NC}"
-    exit 1
-fi
-
 if [ $# -eq 0 ]; then
     show_help
 fi
@@ -495,7 +493,7 @@ remote=${default_remote}
 declare -a explicitly_selected_boosters=( )
 
 # See https://sookocheff.com/post/bash/parsing-bash-script-arguments-with-shopts/
-while getopts ":hdnfb:r:m:" opt; do
+while getopts ":hdnfb:r:m:l:" opt; do
     case ${opt} in
         h)
             show_help
@@ -511,6 +509,13 @@ while getopts ":hdnfb:r:m:" opt; do
             echo -e "${YELLOW}== BYPASSING CHECK FOR LOCAL CHANGES ==${NC}"
             echo
             IGNORE_LOCAL_CHANGES='on'
+        ;;
+        l)
+            # See https://stackoverflow.com/questions/11621639/how-to-expand-relative-paths-in-shell-script/11621788 on how to
+            # resolve relative directories to the current working dir.
+            BOOSTERS_DIR=$(cd $OPTARG; pwd)
+            echo -e "${YELLOW}== Will use local copy of boosters at ${BLUE}${BOOSTERS_DIR}${YELLOW} ==${NC}"
+            echo
         ;;
         b)
             IFS=',' read -r -a branches <<< "$OPTARG"
@@ -548,8 +553,7 @@ case "$subcommand" in
             exit 1
         fi
 
-        CURRENT_DIR=$(pwd)
-        CATALOG_FILE=$CURRENT_DIR"/booster-catalog-versions.txt"
+        CATALOG_FILE=${BOOSTERS_DIR}"/booster-catalog-versions.txt"
         rm -f "$CATALOG_FILE"
         touch "$CATALOG_FILE"
 
@@ -634,6 +638,12 @@ case "$subcommand" in
     ;;
 esac
 
+all_boosters=( $(find ${BOOSTERS_DIR} -name "spring-boot-*-booster" -type d -exec basename {} \; | sort) )
+if [ ${#all_boosters[@]} == 0 ]; then
+    echo -e "${RED}No boosters named spring-boot-*-booster could be found in ${BOOSTERS_DIR}${NC}"
+    exit 1
+fi
+pushd ${BOOSTERS_DIR} > /dev/null
 
 for BOOSTER in ${all_boosters[@]}
 do
@@ -707,6 +717,8 @@ do
         fi
     fi
 done
+
+popd > /dev/null
 
 if [ ${#processed[@]} != 0 ]; then
     echo -e "${BLUE}${#processed[@]} booster/branch combinations were processed:${YELLOW}"
