@@ -2,7 +2,7 @@
 
 ## `for-all-boosters`
 
-A script that operates on all boosters identified as sub-directories (named with the `spring-boot-*-booster` pattern) of the directory in which the script runs. 
+A script that operates on all boosters matching the `spring-boot-*-booster` pattern 
 
 Run `for-all-boosters.sh -h` for an overview of what the script can do and how to use it.
 
