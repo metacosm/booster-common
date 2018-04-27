@@ -51,6 +51,9 @@ COMMIT='on'
 # script-wide toggle to bypass local changes check
 IGNORE_LOCAL_CHANGES='off'
 
+# script-wide toggle to bypass checking out boosters from github
+PERFORM_BOOSTER_LOCAL_SETUP='off'
+
 # script-wide toggle to bypass branch existence check, needed to be able to create branches
 CREATE_BRANCH='off'
 
@@ -102,6 +105,10 @@ current_branch() {
 
 log() {
     echo -e "\t${GREEN}$(current_branch)${BLUE}: ${1}${NC}"
+}
+
+log_without_branch() {
+    echo -e "\t${BLUE}${1}${NC}"
 }
 
 log_ignored() {
@@ -269,6 +276,40 @@ change_version() {
         log_failed "Couldn't set version. Reverting to remote ${remote} version."
         git reset --hard "${remote}"/"${BRANCH}"
     fi
+}
+
+setup_booster_locally () {
+    local booster_name=${1}
+    local booster_git_url=${2}
+
+    log_without_branch "Setting up locally"
+
+    if [ ! -d "${booster_name}" ]; then
+      git clone -q -o ${remote} ${booster_git_url} > /dev/null 2>&1
+      pushd ${booster_name} > /dev/null
+    else
+      pushd ${booster_name} > /dev/null
+      git fetch -q ${remote}
+      BRANCH=$(git rev-parse --abbrev-ref HEAD)
+      revert
+      unset BRANCH
+    fi
+
+    for branch in ${branches[@]}
+    do
+      if git show-ref -q refs/heads/${branch}; then
+        git checkout -q ${branch}
+        git reset -q --hard ${remote}/${branch}
+        git clean -f -d
+      else
+        if git ls-remote --heads --exit-code ${booster_git_url} ${branch} > /dev/null; then
+          git checkout -q --track ${remote}/${branch}
+        fi
+      fi
+    done
+
+    popd > /dev/null
+    unset branch
 }
 
 create_branch() {
@@ -515,6 +556,7 @@ show_help () {
     simple_log "    -l                            Specify where the local copies of the boosters should be found. Defaults to current working directory."
     simple_log "    -m                            The boosters to operate on (comma separated value). The name of each booster can either be the full booster name, or the simple booster name (for example: circuit-breaker) Not selecting this option means that all boosters will be operated on."
     simple_log "    -n                            Skip confirmation dialogs"
+    simple_log "    -p                            Perform booster local setup"
     simple_log "    -r                            The name of the git remote to use for the boosters, for example upstream or origin. The default value is ${default_remote}"
     simple_log "    -s                            Skip the test execution"
     simple_log "    release                       Release the boosters."
@@ -568,7 +610,7 @@ remote=${default_remote}
 declare -a explicitly_selected_boosters=( )
 
 # See https://sookocheff.com/post/bash/parsing-bash-script-arguments-with-shopts/
-while getopts ":hdnfsb:r:m:l:" opt; do
+while getopts ":hdnfspb:r:m:l:" opt; do
     case ${opt} in
         h)
             show_help
@@ -593,13 +635,18 @@ while getopts ":hdnfsb:r:m:l:" opt; do
             # See https://stackoverflow.com/questions/11621639/how-to-expand-relative-paths-in-shell-script/11621788 on how to
             # resolve relative directories to the current working dir.
             BOOSTERS_DIR=$(cd $OPTARG; pwd)
-            echo -e "${YELLOW}== Will use local copy of boosters at ${BLUE}${BOOSTERS_DIR}${YELLOW} ==${NC}"
+            echo -e "${YELLOW}== Will use directory ${BLUE}${BOOSTERS_DIR}${YELLOW} as the booster parent directory ==${NC}"
             echo
         ;;
         b)
             IFS=',' read -r -a branches <<< "$OPTARG"
             echo -e "${YELLOW}== Will use '${BLUE}$OPTARG${YELLOW}' branch(es) instead of the default ${BLUE}'$(IFS=,; echo "${default_branches[*]}")${YELLOW}' ==${NC}"
             echo
+        ;;
+        p)
+            echo -e "${YELLOW}== Will clone boosters from GitHub - This will result in the loss of any local changes to the boosters ==${NC}"
+            echo
+            PERFORM_BOOSTER_LOCAL_SETUP='on'
         ;;
         r)
             echo -e "${YELLOW}== Will use '${BLUE}$OPTARG${YELLOW}' as the git remote instead of the default of ${BLUE}'${default_remote}${YELLOW}' ==${NC}"
@@ -749,15 +796,21 @@ case "$subcommand" in
     ;;
 esac
 
-all_boosters=( $(find ${BOOSTERS_DIR} -name "spring-boot-*-booster" -type d -exec basename {} \; | sort) )
-if [ ${#all_boosters[@]} == 0 ]; then
-    echo -e "${RED}No boosters named spring-boot-*-booster could be found in ${BOOSTERS_DIR}${NC}"
+# The following populates the array with entries like:
+# spring-boot-cache-booster,git@github.com:snowdrop/spring-boot-cache-booster.git
+# spring-boot-circuit-breaker-booster,git@github.com:snowdrop/spring-boot-circuit-breaker-booster.git
+all_boosters_from_github=($(curl -s https://api.github.com/search/repositories\?q\=org:snowdrop+topic:booster | jq -j '.items[] | .name, ",", .ssh_url, "\n"' | sort))
+if [ ${#all_boosters_from_github[@]} == 0 ]; then
+    echo -e "${RED}No boosters named spring-boot-*-booster could be find in GitHub${NC}"
     exit 1
 fi
 pushd ${BOOSTERS_DIR} > /dev/null
 
-for BOOSTER in ${all_boosters[@]}
+for booster_line in ${all_boosters_from_github[@]}
 do
+    IFS=',' read -r -a booster_parts <<< "${booster_line}"
+    BOOSTER=${booster_parts[0]}
+    BOOSTER_GIT_URL=${booster_parts[1]}
     if [[ ${BOOSTER} =~ spring-boot-(.*)-booster ]]; then #this will always be true, but is used in order to capture the simple name
         booster_simple_name=${BASH_REMATCH[1]}
 
@@ -768,9 +821,13 @@ do
         # then spring-boot-circuit-breaker-booster would match,
         # while spring-boot-crud-booster would not
         if [ ${#explicitly_selected_boosters[@]} -eq 0 ] || [[ "${explicitly_selected_boosters[@]}" =~ "${booster_simple_name}" ]]; then
-          pushd ${BOOSTER} > /dev/null
-
           echo -e "${BLUE}> ${YELLOW}${BOOSTER}${BLUE}${NC}"
+
+          if [[ "$PERFORM_BOOSTER_LOCAL_SETUP" == on ]]; then
+            setup_booster_locally ${BOOSTER} ${BOOSTER_GIT_URL}
+          fi
+
+          pushd ${BOOSTER} > /dev/null
 
           if [ ! -d .git ]; then
               msg="Not under git control"
