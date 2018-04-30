@@ -57,6 +57,9 @@ CREATE_BRANCH='off'
 # script-wide toggle to controlling whether input-confirmation will be shown or not
 CONFIRMATION_NEEDED='on'
 
+# script-wide toggle to control whether the tests should be executed or not
+RUN_TESTS='on'
+
 # boosters directory (where all the local booster copies are located), defaults to working dir
 BOOSTERS_DIR=$(pwd)
 
@@ -424,35 +427,38 @@ revert() {
 }
 
 run_tests() {
-    local canonical_name="${BOOSTER}"
+    if [[ "$RUN_TESTS" == on ]]; then
+      local canonical_name="${BOOSTER}"
 
-    log "Running tests of booster ${canonical_name} from directory: ${PWD}"
+      log "Running tests of booster ${canonical_name} from directory: ${PWD}"
 
-    oc delete project ${canonical_name} --ignore-not-found=true
-    sleep 10
-    oc new-project ${canonical_name} > /dev/null
-    mvn $(maven_settings) -q -B clean verify -Popenshift,openshift-it ${MAVEN_EXTRA_OPTS:-}
-    if [ $? -eq 0 ]; then
-        echo
-        log "Successfully tested"
-        #Delete the project since there is no need to inspect the results when everything is OK
-        oc delete project ${canonical_name} > /dev/null
-    else
-        log_failed "Tests failed: inspecting the '${canonical_name}' namespace might provide some insights"
+      oc delete project ${canonical_name} --ignore-not-found=true
+      sleep 10
+      oc new-project ${canonical_name} > /dev/null
+      mvn $(maven_settings) -q -B clean verify -Popenshift,openshift-it ${MAVEN_EXTRA_OPTS:-}
+      if [ $? -eq 0 ]; then
+          echo
+          log "Successfully tested"
+          #Delete the project since there is no need to inspect the results when everything is OK
+          oc delete project ${canonical_name} > /dev/null
+      else
+          log_failed "Tests failed: inspecting the '${canonical_name}' namespace might provide some insights"
 
-        #We don't delete the project because it could be needed for a postmortem inspection
+          #We don't delete the project because it could be needed for a postmortem inspection
+      fi
     fi
 }
 
 run_smoke_tests() {
-    log "Running tests of booster from directory: ${PWD}"
-    mvn $(maven_settings) -q -B clean verify ${MAVEN_EXTRA_OPTS:-}
-    if [ $? -eq 0 ]; then
-        log "Successfully tested"
-    else
-        log_failed "Tests failed"
+    if [[ "$RUN_TESTS" == on ]]; then
+      log "Running tests of booster from directory: ${PWD}"
+      mvn $(maven_settings) -q -B clean verify ${MAVEN_EXTRA_OPTS:-}
+      if [ $? -eq 0 ]; then
+          log "Successfully tested"
+      else
+          log_failed "Tests failed"
+      fi
     fi
-
 }
 
 catalog() {
@@ -471,6 +477,7 @@ show_help () {
     simple_log "    -m                            The boosters to operate on (comma separated value). The name of each booster can either be the full booster name, or the simple booster name (for example: circuit-breaker) Not selecting this option means that all boosters will be operated on."
     simple_log "    -n                            Skip confirmation dialogs"
     simple_log "    -r                            The name of the git remote to use for the boosters, for example upstream or origin. The default value is ${default_remote}"
+    simple_log "    -s                            Skip the test execution"
     simple_log "    release                       Release the boosters."
     simple_log "    change_version <args>         Change the project or parent version. Run with -h to see help."
     simple_log "    run_tests                     Run the integration tests on an OpenShift cluster. Requires to be logged in to the required cluster before executing"
@@ -515,7 +522,7 @@ remote=${default_remote}
 declare -a explicitly_selected_boosters=( )
 
 # See https://sookocheff.com/post/bash/parsing-bash-script-arguments-with-shopts/
-while getopts ":hdnfb:r:m:l:" opt; do
+while getopts ":hdnfsb:r:m:l:" opt; do
     case ${opt} in
         h)
             show_help
@@ -557,6 +564,11 @@ while getopts ":hdnfb:r:m:l:" opt; do
             echo -e "${YELLOW}== SKIP CONFIRMATION DIALOGS ACTIVATED: no confirmation will be requested from the user for any potentially destructive operations ==${NC}"
             echo
             CONFIRMATION_NEEDED='off'
+        ;;
+        s)
+            echo -e "${YELLOW}== SKIPPING TEST EXECUTION. No tests will be run for boosters ==${NC}"
+            echo
+            RUN_TESTS='off'
         ;;
         m)
             IFS=',' read -r -a explicitly_selected_boosters <<< "$OPTARG"
