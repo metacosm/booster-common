@@ -328,7 +328,7 @@ release() {
     runtime=${1:-'1.3-5'}
     
     # replace template placeholders if they exist
-    templates=($(find . -name "application.yaml"))
+    templates=($(find . -path "*/.openshiftio/application.yaml"))
     if [ ${#templates[@]} != 0 ]; then
         for file in ${templates[@]}
         do
