@@ -4,7 +4,14 @@
 
 A script that operates on all boosters identified as sub-directories (named with the `spring-boot-*-booster` pattern) of the directory in which the script runs. 
 
-Run `for-all-boosters.sh -h` for an overview of what the script can do and how to use it. 
+Run `for-all-boosters.sh -h` for an overview of what the script can do and how to use it.
+
+### Dependencies
+
+* git
+* perl
+* mvn
+* oc
 
 ## `sync-descriptors.sh`
 
