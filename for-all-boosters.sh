@@ -392,7 +392,7 @@ release() {
     echo "${BOOSTER}: ${BRANCH} => ${releaseVersion}" >> "$CATALOG_FILE"
 }
 
-revert () {
+revert() {
     if [[ $(git status --porcelain) ]]; then
         log "${RED}DANGER: YOU HAVE UNCOMMITTED CHANGES:"
         git status --porcelain
@@ -449,6 +449,11 @@ run_smoke_tests() {
 
 }
 
+catalog() {
+    # todo: update launcher catalog instead
+    echo "${BOOSTER}: ${BRANCH} => $(get_latest_tag)" >>"$CATALOG_FILE"
+}
+
 show_help () {
     simple_log "This scripts executes the given command on all local boosters (identified by the 'spring-boot-*-booster' pattern) found in the current directory."
     simple_log "Usage:"
@@ -470,6 +475,7 @@ show_help () {
     simple_log "    revert                        Revert the booster state to the last remote version."
     simple_log "    script <path to script>       Run provided script."
     simple_log "    smoke_tests                   Run the unit tests locally."
+    simple_log "    catalog                       Re-generate the catalog file."
     echo
 }
 
@@ -568,6 +574,13 @@ case "$subcommand" in
         touch "$CATALOG_FILE"
 
         cmd="release"
+    ;;
+    catalog)
+        CATALOG_FILE=${BOOSTERS_DIR}"/booster-catalog-versions.txt"
+        rm -f "$CATALOG_FILE"
+        touch "$CATALOG_FILE"
+        simple_log "Re-generating catalog file ${YELLOW}${CATALOG_FILE}${NC}"
+        cmd="catalog"
     ;;
     create_branch)
         CREATE_BRANCH='on'
