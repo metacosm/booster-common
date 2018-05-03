@@ -155,6 +155,16 @@ compute_new_version() {
     echo ${new_version}
 }
 
+get_latest_tag() {
+    local latestTag
+    latestTag=$(git describe --tags --abbrev=0 2> /dev/null)
+    if [  $? -eq 0  ]; then
+        echo ${latestTag}
+    else
+        echo "Not tagged yet"
+    fi
+}
+
 # check that first arg is contained in array second arg
 # see: https://stackoverflow.com/a/8574392
 element_in() {
