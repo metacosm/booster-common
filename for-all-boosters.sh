@@ -325,13 +325,22 @@ release() {
         return 1
     fi
 
-    versionRE='([1-9].[0-9].[0-9]+)-([0-9]+)-?(rhoar|redhat)?-?(SNAPSHOT)?'
+    versionRE='([1-9].[0-9].[0-9]+)-([0-9]+)-?([a-z]+)?-?(SNAPSHOT)?'
     if [[ "${current_version}" =~ ${versionRE} ]]; then
         sbVersion=${BASH_REMATCH[1]}
         versionInt=${BASH_REMATCH[2]}
         newVersionInt=$(($versionInt +1))
         qualifier=${BASH_REMATCH[3]}
         snapshot=${BASH_REMATCH[4]}
+
+        if [[ ! -z ${qualifier} ]]; then
+          readonly allowedQualifiers=(redhat rhoar)
+          if [[ ! " ${allowedQualifiers[@]} " =~ " ${qualifier} " ]]; then
+            # when there is a qualifier present and it's not one of the allowed values, fail
+            log_ignored "Qualifier ${qualifier} is not allowed. Please check the version of the booster"
+            return 1
+          fi
+        fi
 
         releaseVersion="${sbVersion}-${versionInt}"
         if [[ -n "${qualifier}" ]]; then
