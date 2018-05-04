@@ -80,6 +80,14 @@ maven_settings() {
     fi
 }
 
+maven_tests_expression() {
+  if [[ "$RUN_TESTS" == on ]]; then
+    echo ""
+  else
+    echo " -DskipTests "
+  fi
+}
+
 evaluate_mvn_expr() {
     # Evaluate the given maven expression, cf: https://stackoverflow.com/questions/3545292/how-to-get-maven-project-version-to-the-bash-command-line
     result=$(mvn $(maven_settings) -q -Dexec.executable="echo" -Dexec.args='${'${1}'}' --non-recursive exec:exec)
@@ -229,7 +237,7 @@ change_version() {
         if [[ $(git status --porcelain) ]]; then
             log "Updated ${target} from ${YELLOW}${currentVersion}${BLUE} to ${YELLOW}${newVersion}"
             log "Running verification build"
-            if mvn $(maven_settings) clean verify > build.log; then
+            if mvn $(maven_settings) $(maven_tests_expression) clean verify > build.log; then
                 log "Build ${YELLOW}OK"
                 rm build.log
 
