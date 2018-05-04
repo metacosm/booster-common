@@ -692,24 +692,33 @@ do
           else
               for BRANCH in "${branches[@]}"
               do
+                  bypassUpdate='off'
                   # check if branch exists, otherwise skip booster
                   if [ "$CREATE_BRANCH" != on ] && ! git show-ref --verify --quiet refs/heads/${BRANCH}; then
-                      log_ignored "Branch does not exist"
-                      continue
-                  fi
-
-                  if [ "$IGNORE_LOCAL_CHANGES" != on ]; then
-                      # if booster has uncommitted changes, skip it
-                      if [[ $(git status --porcelain) ]]; then
-                          log_ignored "You have uncommitted changes, please stash these changes"
+                      # check if a remote but not locally present branch exist and check it out if it does
+                      if git ls-remote --heads "${remote}" "${BRANCH}" | grep "${BRANCH}" > /dev/null; then
+                          git checkout -b "${BRANCH}" "${remote}"/"${BRANCH}"
+                          bypassUpdate='on'
+                      else
+                          log_ignored "Branch does not exist"
                           continue
                       fi
+                  fi
 
-                      git fetch -q "${remote}" > /dev/null
+                  if [ "$bypassUpdate" == off ]; then
+                      if [ "$IGNORE_LOCAL_CHANGES" != on ]; then
+                          # if booster has uncommitted changes, skip it
+                          if [[ $(git status --porcelain) ]]; then
+                              log_ignored "You have uncommitted changes, please stash these changes"
+                              continue
+                          fi
 
-                      git checkout -q "${BRANCH}" > /dev/null && git rebase "${remote}"/"${BRANCH}" > /dev/null
-                  else
-                      git checkout -q "${BRANCH}" > /dev/null
+                          git fetch -q "${remote}" > /dev/null
+
+                          git checkout -q "${BRANCH}" > /dev/null && git rebase "${remote}"/"${BRANCH}" > /dev/null
+                      else
+                          git checkout -q "${BRANCH}" > /dev/null
+                      fi
                   fi
 
 
