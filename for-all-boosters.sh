@@ -527,6 +527,10 @@ while getopts ":hdnfb:r:m:l:" opt; do
             IGNORE_LOCAL_CHANGES='on'
         ;;
         l)
+            # check that target directory exists, if not create it
+            if [ ! -d "$OPTARG" ]; then
+                mkdir -p $OPTARG
+            fi
             # See https://stackoverflow.com/questions/11621639/how-to-expand-relative-paths-in-shell-script/11621788 on how to
             # resolve relative directories to the current working dir.
             BOOSTERS_DIR=$(cd $OPTARG; pwd)
