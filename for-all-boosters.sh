@@ -325,13 +325,19 @@ release() {
         return 1
     fi
 
-    versionRE='([1-9].[0-9].[0-9]+)-([0-9]+)-?([a-z]+)?-?(SNAPSHOT)?'
+    versionRE='([1-9].[0-9].[0-9]+)-([0-9]+)-?([a-zA-Z0-9]+)?-?(SNAPSHOT)?'
     if [[ "${current_version}" =~ ${versionRE} ]]; then
         sbVersion=${BASH_REMATCH[1]}
         versionInt=${BASH_REMATCH[2]}
         newVersionInt=$(($versionInt +1))
         qualifier=${BASH_REMATCH[3]}
         snapshot=${BASH_REMATCH[4]}
+
+        # needed because when no qualifier exists, the regex captures this is different order
+        if [ -z ${snapshot} ] && [ "$qualifier" == SNAPSHOT ]; then
+          qualifier=""
+          snapshot="SNAPSHOT"
+        fi
 
         if [[ ! -z ${qualifier} ]]; then
           readonly allowedQualifiers=(redhat rhoar)
