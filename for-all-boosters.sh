@@ -335,6 +335,12 @@ release() {
 
     fi
 
+    if git ls-remote --tags "${remote}" "${releaseVersion}" | grep "${releaseVersion}" > /dev/null;
+    then
+      log_ignored "Tag ${releaseVersion} already exists. Please make sure that the booster version is set correctly"
+      return 1
+    fi
+
     runtime=${1:-'1.3-5'}
     
     # replace template placeholders if they exist
