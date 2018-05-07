@@ -133,7 +133,7 @@ push_to_remote() {
 
 commit() {
     if [[ "$COMMIT" == on ]]; then
-        log "Commit"
+        log "Commit: '${1}'"
         git commit -q -am "${1}"
     fi
 }
