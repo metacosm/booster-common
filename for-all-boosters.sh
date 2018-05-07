@@ -474,14 +474,22 @@ catalog() {
     echo "${BOOSTER}: ${BRANCH} => $(get_latest_tag)" >>"$CATALOG_FILE"
 }
 
+trim() {
+    # trim leading and trailing whitespaces using https://stackoverflow.com/a/3232433
+    local toTrim=$(echo "$@")
+    echo -e "${toTrim}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
+}
+
 run_cmd() {
     # build command: since arguments are passed unquoted, we need a separator to mark the command from the commit message
     # we use ---- as separator so we expect arguments to be in the form "cmd ---- msg"
     # first build a string from all arguments
     local cmdAndMsg=$(echo "$@")
-    # then we extract parts using https://stackoverflow.com/a/10520718
-    local cmd=${cmdAndMsg% ----*} # note the space after % to avoid extracting the space before the separator into cmd
-    local msg=${cmdAndMsg#*---- } # note the space after the separator to avoid extracting it into msg
+    # then we extract parts using https://stackoverflow.com/a/10520718 trimming leading and trailing whitespaces
+    local cmd=$(trim ${cmdAndMsg%----*})
+    local msg=$(trim ${cmdAndMsg##*----})
+
+    log "Executing ${YELLOW}'${cmd}'"
 
     if ! eval ${cmd}; then
         log_failed "${cmd} command failed"
