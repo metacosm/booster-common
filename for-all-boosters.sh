@@ -474,6 +474,29 @@ catalog() {
     echo "${BOOSTER}: ${BRANCH} => $(get_latest_tag)" >>"$CATALOG_FILE"
 }
 
+run_cmd() {
+    # build command: since arguments are passed unquoted, we need a separator to mark the command from the commit message
+    # we use ---- as separator so we expect arguments to be in the form "cmd ---- msg"
+    # first build a string from all arguments
+    local cmdAndMsg=$(echo "$@")
+    # then we extract parts using https://stackoverflow.com/a/10520718
+    local cmd=${cmdAndMsg% ----*} # note the space after % to avoid extracting the space before the separator into cmd
+    local msg=${cmdAndMsg#*---- } # note the space after the separator to avoid extracting it into msg
+
+    if ! eval ${cmd}; then
+        log_failed "${cmd} command failed"
+        return 1
+    fi
+
+    if [ -n "$msg" ]; then
+        # we have a commit message so commit and push result of command if that resulted in local changes
+        if [[ $(git status --porcelain) ]]; then
+            commit "${msg}"
+            push_to_remote
+        fi
+    fi
+}
+
 show_help () {
     simple_log "This scripts executes the given command on all local boosters (identified by the 'spring-boot-*-booster' pattern) found in the current directory."
     simple_log "Usage:"
@@ -507,6 +530,13 @@ show_change_version_help() {
     simple_log "    -p                            Optional: change parent version instead of project version."
     simple_log "    -v <version name>             Optional: specify which version to use. Version is computed otherwise."
     simple_log "    -m <commit prefix>            Optional: specify a commit message prefix (e.g. JIRA / github ticket number) to prepend to commit messages. Empty otherwise."
+}
+
+show_cmd_help() {
+    simple_log "cmd command executes the specified command on the project, optionally committing and pushing the changes to the remote repository"
+    simple_log "Usage:"
+    simple_log "    -h                            Display this help message."
+    simple_log "    -p <commit message>           Optional: commit the changes (if any) and pushes them to the remote repository."
 }
 
 error() {
@@ -669,9 +699,29 @@ case "$subcommand" in
         cmd="run_smoke_tests"
     ;;
     cmd)
-        shift
+        # Needed in order to "reset" the options processing for the subcommand
+        OPTIND=2
+        # Process options of subcommand
+        while getopts ":hp:" opt2; do
+            case ${opt2} in
+                h)
+                    show_cmd_help
+                    exit 0
+                ;;
+                p)
+                    message=$OPTARG
+                ;;
+                \?)
+                    error "Invalid cmd option: -$OPTARG" "show_cmd_help" 1>&2
+                ;;
+                :)
+                    error "Invalid cmd option: -$OPTARG requires an argument" "show_cmd_help" 1>&2
+                ;;
+            esac
+        done
+        shift $((OPTIND - 1))
         if [ -n "$1" ]; then
-            cmd="$1"
+            cmd="run_cmd $1 ---- ${message}"
         else
             error "Must provide a command to execute"
         fi
