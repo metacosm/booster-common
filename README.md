@@ -2,7 +2,7 @@
 
 ## `for-all-boosters`
 
-A script that operates on all boosters matching the `spring-boot-*-booster` pattern 
+A script that operates on all boosters under the `snowdrop` organization that have the `booster` topic attached to them 
 
 Run `for-all-boosters.sh -h` for an overview of what the script can do and how to use it.
 
