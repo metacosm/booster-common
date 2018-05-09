@@ -816,7 +816,7 @@ esac
 # spring-boot-circuit-breaker-booster,git@github.com:snowdrop/spring-boot-circuit-breaker-booster.git
 all_boosters_from_github=($(curl -s https://api.github.com/search/repositories\?q\=org:snowdrop+topic:booster | jq -j '.items[] | .name, ",", .ssh_url, "\n"' | sort))
 if [ ${#all_boosters_from_github[@]} == 0 ]; then
-    echo -e "${RED}No boosters named spring-boot-*-booster could be find in GitHub${NC}"
+    echo -e "${RED}No boosters no matching the query were found on GitHub${NC}"
     exit 1
 fi
 pushd ${BOOSTERS_DIR} > /dev/null
