@@ -12,6 +12,7 @@ Run `for-all-boosters.sh -h` for an overview of what the script can do and how t
 * perl
 * mvn
 * oc
+* jq
 
 ## `sync-descriptors.sh`
 
