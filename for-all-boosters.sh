@@ -11,6 +11,8 @@ GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 MAGENTA='\033[0;35m'
 
+readonly DEFAULT_RUNTIME_VERSION="1.3.5"
+
 simple_log () {
     echo -e "${BLUE}${1}${NC}"
 }
@@ -426,7 +428,11 @@ release() {
       return 1
     fi
 
-    runtime=${1:-'1.3-5'}
+    if [ $# -ne 0 ]; then
+      runtime=${1}
+    else
+      runtime=${DEFAULT_RUNTIME_VERSION}
+    fi
     
     # replace template placeholders if they exist
     templates=($(find_openshift_templates))
@@ -514,7 +520,7 @@ s2i_deploy() {
     templates=($(find_openshift_templates))
     for file in ${templates[@]}
     do
-        replace_template_placeholders ${file} '1.3' 'latest'
+        replace_template_placeholders ${file} "${DEFAULT_RUNTIME_VERSION}" 'latest'
         oc apply -f ${file}
         oc new-app --template=$(yq -r .metadata.name ${file}) -p SOURCE_REPOSITORY_URL="https://github.com/snowdrop/${BOOSTER}" -p SOURCE_REPOSITORY_REF=${BRANCH}
         sleep 30 # needed in order to bypass the 'Pending' state
