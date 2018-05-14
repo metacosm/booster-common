@@ -11,7 +11,7 @@ GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 MAGENTA='\033[0;35m'
 
-readonly DEFAULT_RUNTIME_VERSION="1.3.5"
+readonly DEFAULT_RUNTIME_VERSION="1.3-5"
 
 simple_log () {
     echo -e "${BLUE}${1}${NC}"
