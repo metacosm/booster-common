@@ -19,7 +19,6 @@ simple_log () {
 
 # create a temporary directory WORK_DIR to be removed at the exit of the script
 # see: https://stackoverflow.com/questions/4632028/how-to-create-a-temporary-directory
-# Note: this is currently unused and uses a nested function as seen here: https://stackoverflow.com/a/31316688
 # ====
 WORK_DIR=$(mktemp -d)
 
