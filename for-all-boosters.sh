@@ -388,7 +388,7 @@ release() {
     if [[ "${currentVersion}" =~ ${versionRE} ]]; then
         local -r sbVersion=${BASH_REMATCH[1]}
         local -r versionInt=${BASH_REMATCH[2]}
-        local -r newVersionInt=$(($versionInt + 1))
+        local -r newVersionInt=$((versionInt + 1))
         local -r qualifier=${BASH_REMATCH[3]}
         local -r snapshot=${BASH_REMATCH[4]}
 
@@ -408,7 +408,7 @@ release() {
         local -r latestTag=$(get_latest_tag)
         if [[ "${latestTag}" =~ ${versionRE} ]]; then
             local -r tagVersion=${BASH_REMATCH[2]}
-            if (($tagVersion >= $versionInt)); then
+            if ((tagVersion >= versionInt)); then
                 log_failed "Booster version '${YELLOW}${currentVersion}${RED}' is older than latest released version '${YELLOW}${latestTag}${RED}'"
                 return 1
             fi
@@ -423,7 +423,7 @@ release() {
         local -r latestParentTag=$(get_latest_tag ${boosterParentDir})
         if [[ "${latestParentTag}" =~ ${versionRE} ]]; then
             local -r parentTagVersion=${BASH_REMATCH[2]}
-            if (($parentTagVersion != $parentVersionInt)); then
+            if ((parentTagVersion != parentVersionInt)); then
                 log_failed "Booster parent version '${YELLOW}${parentVersion}${RED}' does not match latest released version '${YELLOW}${latestParentTag}${RED}'"
                 return 1
             fi
