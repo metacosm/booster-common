@@ -375,6 +375,8 @@ replace_template_placeholders() {
 }
 
 release() {
+    verify_maven_project_setup
+
     current_version=$(evaluate_mvn_expr 'project.version')
 
     if [[ "${current_version}" != *-SNAPSHOT ]]; then
