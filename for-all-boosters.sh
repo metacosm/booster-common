@@ -417,7 +417,9 @@ release() {
             nextVersion="${nextVersion}-${qualifier}"
         fi
         nextVersion="${nextVersion}-SNAPSHOT"
-
+    else
+        log_failed "${YELLOW}${currentVersion} does not match expected version format"
+        return 1
     fi
 
     if git ls-remote --tags "${remote}" "${releaseVersion}" | grep "${releaseVersion}" > /dev/null;
