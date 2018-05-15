@@ -373,7 +373,7 @@ replace_template_placeholders() {
   rm ${file}.bak
 }
 
-release() {
+release() (
     verify_maven_project_setup
 
     local -r currentVersion=$(evaluate_mvn_expr 'project.version')
@@ -413,13 +413,21 @@ release() {
             fi
         fi
 
+        # inner function to retrieve parent's latest tag
+        # see https://stackoverflow.com/a/31316688
+        getLatestParentTagForSBVersion() {
+            local -r sbVersion=${1:?"Specify target Spring Boot version"}
+            local -r boosterParentDir='spring-boot-booster-parent'
+            if [ ! -d "${boosterParentDir}" ]; then
+                git clone -q 'git@github.com:snowdrop/spring-boot-booster-parent.git' ${boosterParentDir} > /dev/null 2>&1
+            fi
+            # todo: change branch on parent code based on Spring Boot version when we start supporting different SB versions
+            echo $(get_latest_tag ${boosterParentDir})
+        }
+
         # check that we're using the latest available parent for this particular SB version
         pushd ${WORK_DIR} > /dev/null
-        local -r boosterParentDir='spring-boot-booster-parent'
-        if [ ! -d "${boosterParentDir}" ]; then
-            git clone -q 'git@github.com:snowdrop/spring-boot-booster-parent.git' ${boosterParentDir} > /dev/null 2>&1
-        fi
-        local -r latestParentTag=$(get_latest_tag ${boosterParentDir})
+        local -r latestParentTag=$(getLatestParentTagForSBVersion ${sbVersion})
         if [[ "${latestParentTag}" =~ ${versionRE} ]]; then
             local -r parentTagVersion=${BASH_REMATCH[2]}
             if ((parentTagVersion != parentVersionInt)); then
@@ -519,7 +527,7 @@ release() {
     # todo: update launcher catalog instead
     log "Appending new version ${YELLOW}${releaseVersion}${BLUE} to ${YELLOW}${CATALOG_FILE}"
     echo "${BOOSTER}: ${BRANCH} => ${releaseVersion}" >> "$CATALOG_FILE"
-}
+)
 
 do_revert() {
   git reset --hard "${remote}"/"${BRANCH}"
