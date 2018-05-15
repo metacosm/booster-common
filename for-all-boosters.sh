@@ -11,6 +11,8 @@ GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 MAGENTA='\033[0;35m'
 
+readonly DEFAULT_RUNTIME_VERSION="1.3-5"
+
 simple_log () {
     echo -e "${BLUE}${1}${NC}"
 }
@@ -358,6 +360,24 @@ delete_branch() {
     unset branch # unset to avoid side-effects in log
 }
 
+find_openshift_templates() {
+  echo $(find . -path "*/.openshiftio/application.yaml")
+}
+
+replace_template_placeholders() {
+  local file=${1}
+  local runtime_version=${2}
+  local booster_version=${3}
+
+  sed -i.bak -e "s/RUNTIME_VERSION/${runtime_version}/g" ${file}
+  log "${YELLOW}${file}${BLUE}: Replaced RUNTIME_VERSION token by ${runtime_version}"
+
+  sed -i.bak -e "s/BOOSTER_VERSION/${booster_version}/g" ${file}
+  log "${YELLOW}${file}${BLUE}: Replaced BOOSTER_VERSION token by ${booster_version}"
+
+  rm ${file}.bak
+}
+
 release() {
     current_version=$(evaluate_mvn_expr 'project.version')
 
@@ -408,20 +428,18 @@ release() {
       return 1
     fi
 
-    runtime=${1:-'1.3-5'}
+    if [ $# -ne 0 ]; then
+      runtime=${1}
+    else
+      runtime=${DEFAULT_RUNTIME_VERSION}
+    fi
     
     # replace template placeholders if they exist
-    templates=($(find . -path "*/.openshiftio/application.yaml"))
+    templates=($(find_openshift_templates))
     if [ ${#templates[@]} != 0 ]; then
         for file in ${templates[@]}
         do
-            sed -i.bak -e "s/RUNTIME_VERSION/${runtime}/g" ${file}
-            log "${YELLOW}${file}${BLUE}: Replaced RUNTIME_VERSION token by ${runtime}"
-
-            sed -i.bak -e "s/BOOSTER_VERSION/${releaseVersion}/g" ${file}
-            log "${YELLOW}${file}${BLUE}: Replaced BOOSTER_VERSION token by ${releaseVersion}"
-
-            rm ${file}.bak
+            replace_template_placeholders ${file} ${runtime} ${releaseVersion}
         done
         if [[ $(git status --porcelain) ]]; then
             commit "Replaced templates placeholders: RUNTIME_VERSION -> ${runtime}, BOOSTER_VERSION -> ${releaseVersion}"
@@ -465,6 +483,11 @@ release() {
     echo "${BOOSTER}: ${BRANCH} => ${releaseVersion}" >> "$CATALOG_FILE"
 }
 
+do_revert() {
+  git reset --hard "${remote}"/"${BRANCH}"
+  git clean -f -d
+}
+
 revert() {
     if [[ $(git status --porcelain) ]]; then
         log "${RED}DANGER: YOU HAVE UNCOMMITTED CHANGES:"
@@ -483,28 +506,66 @@ revert() {
 
     if [ "${answer}" == Y ]; then
         log "Resetting to remote ${remote} state"
-        git reset --hard "${remote}"/"${BRANCH}"
-        git clean -f -d
+        do_revert
     else
         log "Leaving as-is"
     fi
 }
 
-run_tests() {
+fmp_deploy() {
+  mvn $(maven_settings) -q -B -DskipTests=true clean compile fabric8:deploy -Popenshift ${MAVEN_EXTRA_OPTS:-}
+}
+
+s2i_deploy() {
+    templates=($(find_openshift_templates))
+    for file in ${templates[@]}
+    do
+        replace_template_placeholders ${file} "${DEFAULT_RUNTIME_VERSION}" 'latest'
+        oc apply -f ${file}
+        oc new-app --template=$(yq -r .metadata.name ${file}) -p SOURCE_REPOSITORY_URL="https://github.com/snowdrop/${BOOSTER}" -p SOURCE_REPOSITORY_REF=${BRANCH}
+        sleep 30 # needed in order to bypass the 'Pending' state
+        timeout 300s bash -c 'while [[ $(oc get pod -o json | jq  ".items[] | select(.metadata.name | contains(\"build\"))  | .status  " | jq -rs "sort_by(.startTme) | last | .phase") -eq "Running" ]]; do sleep 20; done; echo ""'
+    done
+}
+
+create_namespace() {
+  local namespace_name=${1}
+  oc delete project ${namespace_name} --ignore-not-found=true
+  while [[ ! -z $(oc get namespaces -o json | jq  -r ".items[] | select(.metadata.name == \"${namespace_name}\") | .status.phase") ]]; do sleep 5; done;
+  oc new-project ${namespace_name} > /dev/null
+}
+
+delete_namespace() {
+  local namespace_name=${1}
+  oc delete project ${namespace_name} > /dev/null
+}
+
+
+run_integration_tests() {
     if [[ "$RUN_TESTS" == on ]]; then
       local canonical_name="${BOOSTER}"
+      local deployment_type=${1:-'fmp_deploy'}
 
       log "Running tests of booster ${canonical_name} from directory: ${PWD}"
 
-      oc delete project ${canonical_name} --ignore-not-found=true
-      sleep 10
-      oc new-project ${canonical_name} > /dev/null
-      mvn $(maven_settings) -q -B clean verify -Popenshift,openshift-it ${MAVEN_EXTRA_OPTS:-}
+      create_namespace ${canonical_name}
+
+      log "Deploying using ${deployment_type}"
+      ${deployment_type}
+
+      if [ $? -ne 0 ]; then
+        log_ignored "Deployment type '${deployment_type}' is not valid"
+        delete_namespace ${canonical_name}
+        return
+      fi
+      mvn $(maven_settings) -q -B clean verify -Dfabric8.skip=true -Popenshift,openshift-it ${MAVEN_EXTRA_OPTS:-}
       if [ $? -eq 0 ]; then
           echo
           log "Successfully tested"
           #Delete the project since there is no need to inspect the results when everything is OK
-          oc delete project ${canonical_name} > /dev/null
+          delete_namespace ${canonical_name}
+          # Make sure we cleanup
+          do_revert
       else
           log_failed "Tests failed: inspecting the '${canonical_name}' namespace might provide some insights"
 
@@ -576,14 +637,14 @@ show_help () {
     simple_log "    -s                            Skip the test execution"
     simple_log "    release                       Release the boosters."
     simple_log "    change_version <args>         Change the project or parent version. Run with -h to see help."
-    simple_log "    run_tests                     Run the integration tests on an OpenShift cluster. Requires to be logged in to the required cluster before executing"
+    simple_log "    run_integration_tests <deployment type>  Run the integration tests on an OpenShift cluster. Requires to be logged in to the required cluster before executing. Deployment Type can be either fmp_deploy (default) or s2i_deploy"
     simple_log "    create_branch <branch name>   Create a branch."
     simple_log "    delete_branch <branch name>   Delete a branch."
     simple_log "    cmd <command>                 Execute the provided shell command."
     simple_log "    fn <function name>            Execute the specified function. This allows to call internal functions. Make sure you know what you're doing!"
     simple_log "    revert                        Revert the booster state to the last remote version."
     simple_log "    script <path to script>       Run provided script."
-    simple_log "    smoke_tests                   Run the unit tests locally."
+    simple_log "    run_smoke_tests               Run the unit tests locally."
     simple_log "    catalog                       Re-generate the catalog file."
     echo
 }
@@ -762,10 +823,11 @@ case "$subcommand" in
         IGNORE_LOCAL_CHANGES='on'
         cmd="revert"
     ;;
-    run_tests)
-        cmd="run_tests"
+    run_integration_tests)
+        shift
+        cmd="run_integration_tests ${1}"
     ;;
-    smoke_tests)
+    run_smoke_tests)
         cmd="run_smoke_tests"
     ;;
     cmd)

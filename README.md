@@ -13,6 +13,7 @@ Run `for-all-boosters.sh -h` for an overview of what the script can do and how t
 * mvn
 * oc
 * jq
+* yq
 
 ## `sync-descriptors.sh`
 
