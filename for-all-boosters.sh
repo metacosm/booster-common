@@ -377,34 +377,73 @@ replace_template_placeholders() {
 release() {
     verify_maven_project_setup
 
-    current_version=$(evaluate_mvn_expr 'project.version')
+    local -r current_version=$(evaluate_mvn_expr 'project.version')
 
     if [[ "${current_version}" != *-SNAPSHOT ]]; then
         log_ignored "Cannot release a non-snapshot version"
         return 1
     fi
 
-    versionRE='([1-9].[0-9].[0-9]+)-([0-9]+)-?([a-zA-Z0-9]+)?-?(SNAPSHOT)?'
+    local -r versionRE='([1-9].[0-9].[0-9]+)-([0-9]+)-?([a-zA-Z0-9]+)?-?(SNAPSHOT)?'
     if [[ "${current_version}" =~ ${versionRE} ]]; then
-        sbVersion=${BASH_REMATCH[1]}
-        versionInt=${BASH_REMATCH[2]}
-        newVersionInt=$(($versionInt +1))
-        qualifier=${BASH_REMATCH[3]}
-        snapshot=${BASH_REMATCH[4]}
+        local -r sbVersion=${BASH_REMATCH[1]}
+        local -r versionInt=${BASH_REMATCH[2]}
+        local -r newVersionInt=$(($versionInt + 1))
+        local -r qualifier=${BASH_REMATCH[3]}
+        local -r snapshot=${BASH_REMATCH[4]}
+
+        # check that parent and booster use the same Spring Boot version
+        local -r parentVersion=$(evaluate_mvn_expr 'project.parent.version')
+        local parentVersionInt
+        if [[ "${parentVersion}" =~ ${versionRE} ]]; then
+            local -r parentSBVersion=${BASH_REMATCH[1]}
+            parentVersionInt=${BASH_REMATCH[2]}
+            if [ "$parentSBVersion" != "$sbVersion" ]; then
+                log_failed "Booster uses '${YELLOW}${sbVersion}${RED}' Spring Boot version while parent uses '${YELLOW}${parentSBVersion}${RED}'"
+                return 1
+            fi
+        fi
+
+        # check that booster version is greater than latest tag
+        local -r latestTag=$(get_latest_tag)
+        if [[ "${latestTag}" =~ ${versionRE} ]]; then
+            local -r tagVersion=${BASH_REMATCH[2]}
+            if (($tagVersion >= $versionInt)); then
+                log_failed "Booster version '${YELLOW}${current_version}${RED}' is older than latest released version '${YELLOW}${latestTag}${RED}'"
+                return 1
+            fi
+        fi
+
+        # check that we're using the latest available parent for this particular SB version
+        pushd ${WORK_DIR} > /dev/null
+        local -r boosterParentDir='spring-boot-booster-parent'
+        if [ ! -d "${boosterParentDir}" ]; then
+            git clone -q 'git@github.com:snowdrop/spring-boot-booster-parent.git' ${boosterParentDir} > /dev/null 2>&1
+        fi
+        local -r latestParentTag=$(get_latest_tag ${boosterParentDir})
+        if [[ "${latestParentTag}" =~ ${versionRE} ]]; then
+            local -r parentTagVersion=${BASH_REMATCH[2]}
+            if (($parentTagVersion != $parentVersionInt)); then
+                log_failed "Booster parent version '${YELLOW}${parentVersion}${RED}' does not match latest released version '${YELLOW}${latestParentTag}${RED}'"
+                return 1
+            fi
+        fi
+        popd > /dev/null
+
 
         # needed because when no qualifier exists, the regex captures this is different order
         if [ -z ${snapshot} ] && [ "$qualifier" == SNAPSHOT ]; then
-          qualifier=""
-          snapshot="SNAPSHOT"
+            qualifier=""
+            snapshot="SNAPSHOT"
         fi
 
         if [[ ! -z ${qualifier} ]]; then
-          readonly allowedQualifiers=(redhat rhoar)
-          if [[ ! " ${allowedQualifiers[@]} " =~ " ${qualifier} " ]]; then
-            # when there is a qualifier present and it's not one of the allowed values, fail
-            log_ignored "Qualifier ${qualifier} is not allowed. Please check the version of the booster"
-            return 1
-          fi
+            local -r allowedQualifiers=(redhat rhoar)
+            if [[ ! " ${allowedQualifiers[@]} " =~ " ${qualifier} " ]]; then
+                # when there is a qualifier present and it's not one of the allowed values, fail
+                log_ignored "Qualifier ${qualifier} is not allowed. Please check the version of the booster"
+                return 1
+            fi
         fi
 
         releaseVersion="${sbVersion}-${versionInt}"
