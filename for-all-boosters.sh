@@ -176,8 +176,9 @@ compute_new_version() {
 }
 
 get_latest_tag() {
+    local -r gitDir=${1:-.}
     local latestTag
-    latestTag=$(git describe --tags --abbrev=0 2> /dev/null)
+    latestTag=$(git -C ${gitDir} describe --tags --abbrev=0 2> /dev/null)
     if [  $? -eq 0  ]; then
         echo ${latestTag}
     else
