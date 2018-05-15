@@ -377,15 +377,15 @@ replace_template_placeholders() {
 release() {
     verify_maven_project_setup
 
-    local -r current_version=$(evaluate_mvn_expr 'project.version')
+    local -r currentVersion=$(evaluate_mvn_expr 'project.version')
 
-    if [[ "${current_version}" != *-SNAPSHOT ]]; then
+    if [[ "${currentVersion}" != *-SNAPSHOT ]]; then
         log_ignored "Cannot release a non-snapshot version"
         return 1
     fi
 
     local -r versionRE='([1-9].[0-9].[0-9]+)-([0-9]+)-?([a-zA-Z0-9]+)?-?(SNAPSHOT)?'
-    if [[ "${current_version}" =~ ${versionRE} ]]; then
+    if [[ "${currentVersion}" =~ ${versionRE} ]]; then
         local -r sbVersion=${BASH_REMATCH[1]}
         local -r versionInt=${BASH_REMATCH[2]}
         local -r newVersionInt=$(($versionInt + 1))
@@ -409,7 +409,7 @@ release() {
         if [[ "${latestTag}" =~ ${versionRE} ]]; then
             local -r tagVersion=${BASH_REMATCH[2]}
             if (($tagVersion >= $versionInt)); then
-                log_failed "Booster version '${YELLOW}${current_version}${RED}' is older than latest released version '${YELLOW}${latestTag}${RED}'"
+                log_failed "Booster version '${YELLOW}${currentVersion}${RED}' is older than latest released version '${YELLOW}${latestTag}${RED}'"
                 return 1
             fi
         fi
