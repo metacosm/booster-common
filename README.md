@@ -23,4 +23,9 @@ The script relies heavily on the `mvn` executable to determine the current versi
 therefore the boosters need to be valid maven projects in order to the various operations to work.
 Furthermore, for the `redhat` branch, the local Red Hat maven repositories need to be setup correctly in order for maven to be able to
 resolve all the dependencies. If in a such cases a custom `settings.xml` file is used, then the environment variable  
-`MAVEN_SETTINGS` can be set to point to that file and all operations of this script will use that custom settings file. 
+`MAVEN_SETTINGS` can be set to point to that file and all operations of this script will use that custom settings file.
+
+## `src/update-pom.groovy`
+
+A Groovy script that checks the `properties` and updates those values with the highest corresponding dependency version on Maven Central
+`groovy src/update-pom.groovy /path/to/pom.xml`   
