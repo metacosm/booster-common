@@ -28,4 +28,27 @@ resolve all the dependencies. If in a such cases a custom `settings.xml` file is
 ## `src/update-pom.groovy`
 
 A Groovy script that checks the `properties` and updates those values with the highest corresponding dependency version on Maven Central
-`groovy src/update-pom.groovy /path/to/pom.xml`   
+`groovy src/update-pom.groovy /path/to/pom.xml` 
+
+
+## Steps to almost complete automated release
+
+An ideal scenario would be to create a script that would do: `spring-boot-release.sh 1.5.13` and perform all the required steps
+to release a new version of the Spring Boot runtime based on the specified target Spring Boot release.
+
+- Get the target Spring Boot version from the user. Maybe have some leeway: `1.5.13` would be assumed to be `1.5.13.RELEASE`?
+- Based on that version, retrieve the associated `spring-boot-dependencies` POM (e.g. https://github.com/spring-projects/spring-boot/blob/v1.5.13.RELEASE/spring-boot-dependencies/pom.xml, the URL should be buildable from the given version) and process it to extract the
+version properties we use in our BOM with the new values
+- Use this new BOM version to create a new booster parent version and release a new parent SNAPSHOT
+- Update the boosters to use the new parent SNAPSHOT, change their version accordingly and run the tests. This can already be 
+done automatically using `for-all-boosters`.
+- Assuming all goes well, release the community boosters. Maybe wait for QE feedback, first? This can already be done
+automatically.
+- ...
+ 
+
+### Ideas
+
+- When the script is run, it should record where in the process it is in a file so that it can be executed in several steps and
+restart the process at the next step instead of the beginning.
+- Remove parent and instead create a maven POM template from which the boosters' POM could be derived?
