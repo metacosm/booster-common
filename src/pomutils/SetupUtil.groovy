@@ -22,7 +22,7 @@ final class SetupUtil {
 
     private SetupUtil() {}
 
-    static SetupResult setup() {
+    static MavenContext setup() {
         final serviceLocator = new DefaultServiceLocator().with {
             addService(ArtifactDescriptorReader, DefaultArtifactDescriptorReader)
             addService(RepositoryConnectorFactory, BasicRepositoryConnectorFactory)
@@ -50,6 +50,6 @@ final class SetupUtil {
                 ).build()
         ]
 
-        return new SetupResult(system, session, remoteRepos)
+        return new MavenContext(system, session, remoteRepos)
     }
 }
