@@ -20,7 +20,9 @@ if (args.length < 2 || args.length > 3) {
 The script expects two arguments mandarory dependencies: 'pomFile', 'sbVersion' and one optional one: 'versionOverrideStr' 
 
 'pomFile' is path to the pom.xml file that contains the Snowdrop Spring Boot Boom
-'sbVersion' is the upstream Spring Boot version that we want to sync our dependencies to
+'sbVersion' is the upstream Spring Boot version that we want to sync our dependencies to 
+If the version also contains a qualifier (for example '1.5.13.RELEASE' or '2.0.0.M1'), then it's used as is
+If no qualifier is present (for example '1.5.13'), then the 'RELEASE' qualifier is added
 'versionOverrideStr' is a string that changes the default version-update behavior of the script.
 This is best explained by some examples.
 
@@ -64,9 +66,9 @@ final springBootManagedDepsResolver = new MavenGavManagedDependenciesResolver(Se
 final Map<GA, String> springBootManagedDependenciesGaToVersionMap =
         springBootManagedDepsResolver
                 .resolve(
-            "org.springframework.boot",
-            "spring-boot-dependencies",
-            "${springBootVersion.replace(".RELEASE", "")}.RELEASE"
+                "org.springframework.boot",
+                "spring-boot-dependencies",
+                    effectiveSpringBootVersion(springBootVersion)
                 )
                 .collect { it.artifact }
                 .collectEntries {
@@ -136,6 +138,17 @@ private Tuple2<Set<String>, Map<String, String>> parseVersionOverrideStr(String 
             pinnedPropertyNames,
             propertyNameToHardCodedVersion
     )
+}
+
+private String effectiveSpringBootVersion(String springBootVersion) {
+    if (springBootVersion ==~ /[0-9]+.[0-9]+.[0-9]+/) {
+        return "${springBootVersion}.RELEASE"
+    }
+    else if (springBootVersion ==~ /[0-9]+.[0-9]+.[0-9]+.[A-Z0-9]+/) {
+        return springBootVersion
+    }
+
+    throw new IllegalArgumentException("Version: '${springBootVersion}' is not a valid release version")
 }
 
 private void updatePomWithLatestVersions(File pomFile, Map<?, ?> propertyNameToVersionMap) {
