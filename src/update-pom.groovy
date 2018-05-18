@@ -9,10 +9,12 @@ import ch.qos.logback.classic.Level
 import groovy.transform.EqualsAndHashCode
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import pomutils.MavenGaHighestVersionSearcher
+import pomutils.SetupUtil
 
 setupLogging()
 
-final searcher = new pomutils.MavenGaHighestVersionSearcher()
+final searcher = new MavenGaHighestVersionSearcher(SetupUtil.setup())
 
 final pomFile = new File(args[0])
 final pomXml = new XmlSlurper().parse(pomFile)
@@ -40,6 +42,7 @@ final propertyNameToHighestVersionMap =
             final highestVersion = searcher.getHighestVersion(ga.groupId, ga.artifactId)
             [(property): highestVersion.toString()]
         }
+
 
 updatePomWithLatestVersions(pomFile, propertyNameToHighestVersionMap)
 
