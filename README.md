@@ -27,8 +27,14 @@ resolve all the dependencies. If in a such cases a custom `settings.xml` file is
 
 ## `src/update-pom.groovy`
 
-A Groovy script that checks the `properties` and updates those values with the highest corresponding dependency version on Maven Central
-`groovy src/update-pom.groovy /path/to/pom.xml` 
+A Groovy script that checks the `properties` and updates those values with the corresponding dependency version in the upstream Spring Boot BOM
+An example invocation that includes all the available features would be:
+
+`groovy update-pom.groovy /path/to/pom.xml 1.5.13 "hibernate.version=,tomcat.version=8.5.29"`
+
+To see more information about the script invoke:
+
+`groovy update-pom.groovy` 
 
 
 ## Steps to almost complete automated release
