@@ -11,8 +11,6 @@ GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 MAGENTA='\033[0;35m'
 
-readonly DEFAULT_RUNTIME_VERSION="1.3-5"
-
 simple_log () {
     echo -e "${BLUE}${1}${NC}"
 }
@@ -373,6 +371,36 @@ replace_template_placeholders() {
   rm ${file}.bak
 }
 
+# Extracts the image that is used in a template
+# assumes that the ImageStream is named 'runtime'
+# and the tag containing the image is named 'RUNTIME_VERSION'
+# An example output could be: registry.access.redhat.com/redhat-openjdk-18/openjdk18-openshift
+get_image_from_template() {
+  local file=${1}
+  echo $(yq -r '.objects[] | select(.kind == "ImageStream") | select(.metadata.name == "runtime") | .spec.tags[] | select(.name == "RUNTIME_VERSION") | .from.name' ${file} | cut -f1 -d":")
+}
+
+# Determines what the highest tag is for an image
+# The image must be in the following format registryUrl/imageOwner/imageName,
+# for example: registry.access.redhat.com/redhat-openjdk-18/openjdk18-openshift
+# TODO: add caching of results
+determine_highest_runtime_version_of_image() {
+  local registryUrl=$(echo "${1}" | cut -f1 -d"/")
+  local imageOwner=$(echo "${1}" | cut -f2 -d"/")
+  local imageName=$(echo "${1}" | cut -f3 -d"/")
+  echo $(curl -s -L http://${registryUrl}/v2/${imageOwner}/${imageName}/tags/list | jq -r  '.tags | sort | reverse | del(.[0]) | first')
+}
+
+# Determines what the highest tag is for the runtime image in the template
+# See get_image_from_template and determine_highest_runtime_version_of_image
+determine_highest_runtime_version_of_image_in_template() {
+  local file=${1}
+  local imageFromFile=$(get_image_from_template ${file})
+  echo $(determine_highest_runtime_version_of_image ${imageFromFile})
+}
+
+
+
 release() (
     verify_maven_project_setup
 
@@ -474,17 +502,16 @@ release() (
       return 1
     fi
 
-    if [ $# -ne 0 ]; then
-      runtime=${1}
-    else
-      runtime=${DEFAULT_RUNTIME_VERSION}
-    fi
-    
     # replace template placeholders if they exist
     templates=($(find_openshift_templates))
     if [ ${#templates[@]} != 0 ]; then
         for file in ${templates[@]}
         do
+            if [ $# -ne 0 ]; then
+              runtime=${1}
+            else
+              runtime=$(determine_highest_runtime_version_of_image_in_template ${file})
+            fi
             replace_template_placeholders ${file} ${runtime} ${releaseVersion}
         done
         if [[ $(git status --porcelain) ]]; then
@@ -566,7 +593,8 @@ s2i_deploy() {
     templates=($(find_openshift_templates))
     for file in ${templates[@]}
     do
-        replace_template_placeholders ${file} "${DEFAULT_RUNTIME_VERSION}" 'latest'
+        local highestImageTag=$(determine_highest_runtime_version_of_image_in_template ${file})
+        replace_template_placeholders ${file} "${highestImageTag}" 'latest'
         oc apply -f ${file}
         oc new-app --template=$(yq -r .metadata.name ${file}) -p SOURCE_REPOSITORY_URL="https://github.com/snowdrop/${BOOSTER}" -p SOURCE_REPOSITORY_REF=${BRANCH}
         sleep 30 # needed in order to bypass the 'Pending' state
