@@ -416,8 +416,8 @@ release() (
         local -r sbVersion=${BASH_REMATCH[1]}
         local -r versionInt=${BASH_REMATCH[2]}
         local -r newVersionInt=$((versionInt + 1))
-        local -r qualifier=${BASH_REMATCH[3]}
-        local -r snapshot=${BASH_REMATCH[4]}
+        local qualifier=${BASH_REMATCH[3]}
+        local snapshot=${BASH_REMATCH[4]}
 
         # check that parent and booster use the same Spring Boot version
         local -r parentVersion=$(evaluate_mvn_expr 'project.parent.version')
