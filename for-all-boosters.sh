@@ -119,7 +119,7 @@ log_failed() {
 
 push_to_remote() {
     currentBranch=${branch:-$BRANCH}
-    local remoteToPushTo=${1}
+    local remoteToPushTo=${1:-$remote}
     options=${2:-}
 
     if [[ "$PUSH" == on ]]; then
@@ -250,7 +250,7 @@ change_version() {
                 fi
                 commit ${jira}"Update ${target} version to ${newVersion}"
 
-                push_to_remote "${remote}"
+                push_to_remote
 
                 # When dry-run is enabled, revert local changes in order leave things the way we found them :)
                 if [[ "$COMMIT" == off ]]; then
