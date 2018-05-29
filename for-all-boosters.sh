@@ -358,29 +358,36 @@ find_openshift_templates() {
 }
 
 replace_template_placeholders() {
-  local file=${1}
-  local runtime_version=${2}
+    local file=${1}
+    local runtime_version=${2}
+    local booster_version=${3}
 
-  sed -i.bak -e "s/RUNTIME_VERSION/\${RUNTIME_VERSION}/g" ${file}
-    perl -pi -e "undef $/; s/parameters\:/parameters\:
-- name: RUNTIME_VERSION
-  displayName: OpenJDK 8 image version to use
-  description: Specifies which version of the OpenShift OpenJDK 8 image to use
-  value: ${runtime_version}
-  required: true/" ${file}
-    log "${YELLOW}${file}${BLUE}: Replaced RUNTIME_VERSION token by \${RUNTIME_VERSION}"
+    sed -i.bak -e "s/RUNTIME_VERSION/${runtime_version}/g" ${file}
+    log "${YELLOW}${file}${BLUE}: Replaced RUNTIME_VERSION token by ${runtime_version}"
 
-  rm ${file}.bak
+    sed -i.bak -e "s/BOOSTER_VERSION/${booster_version}/g" ${file}
+    log "${YELLOW}${file}${BLUE}: Replaced BOOSTER_VERSION token by ${booster_version}"
+
+    rm ${file}.bak
 }
 
 update_templates() {
     templates=( $(find_openshift_templates) )
+    local runtime=$(determine_highest_runtime_version_of_image 'registry.access.redhat.com/redhat-openjdk-18/openjdk18-openshift')
 
     if [ ${#templates[@]} != 0 ]; then
         for file in ${templates[@]}
         do
-            local runtime=$(determine_highest_runtime_version_of_image 'registry.access.redhat.com/redhat-openjdk-18/openjdk18-openshift')
-            replace_template_placeholders ${file} ${runtime}
+            sed -i.bak -e "s/RUNTIME_VERSION/\${RUNTIME_VERSION}/g" ${file}
+            perl -pi -e "undef $/; s/parameters\:/parameters\:
+- name: RUNTIME_VERSION
+  displayName: OpenJDK 8 image version to use
+  description: Specifies which version of the OpenShift OpenJDK 8 image to use
+  value: ${runtime}
+  required: true/" ${file}
+            log "${YELLOW}${file}${BLUE}: Replaced RUNTIME_VERSION token by \${RUNTIME_VERSION}"
+
+            rm ${file}.bak
         done
         if [[ $(git status --porcelain) ]]; then
             commit "Replaced templates placeholders: RUNTIME_VERSION -> ${runtime}"
