@@ -372,6 +372,9 @@ replace_template_placeholders() {
 }
 
 update_templates() {
+    # first create branch to commit the changes so that we can test them using the current branch as starting point
+    create_branch "${branch}-template-parameter-for-runtime"
+
     templates=( $(find_openshift_templates) )
     local runtime=$(determine_highest_runtime_version_of_image 'registry.access.redhat.com/redhat-openjdk-18/openjdk18-openshift')
 
