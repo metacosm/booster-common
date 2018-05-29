@@ -394,9 +394,10 @@ update_templates() {
         done
         if [[ $(git status --porcelain) ]]; then
             commit "Replaced templates placeholders: RUNTIME_VERSION -> ${runtime}"
+            push_to_remote
         else
             # if no changes were made it means that templates don't contain tokens and should be fixed
-            log_ignored "Couldn't replace tokens in templates"
+            log_failed "Couldn't replace tokens in templates"
             return 1
         fi
     fi
