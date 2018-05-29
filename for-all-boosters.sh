@@ -233,7 +233,7 @@ change_version() {
         # see: https://unix.stackexchange.com/a/92907
         cmd="perl -pi -e 's/<version>${escapedCurrent}</<version>${newVersion}</g' pom.xml"
     fi
-    
+
     if eval ${cmd}; then
         # Only attempt committing if we have changes otherwise the script will exit
         if [[ $(git status --porcelain) ]]; then
@@ -360,15 +360,37 @@ find_openshift_templates() {
 replace_template_placeholders() {
   local file=${1}
   local runtime_version=${2}
-  local booster_version=${3}
 
-  sed -i.bak -e "s/RUNTIME_VERSION/${runtime_version}/g" ${file}
-  log "${YELLOW}${file}${BLUE}: Replaced RUNTIME_VERSION token by ${runtime_version}"
-
-  sed -i.bak -e "s/BOOSTER_VERSION/${booster_version}/g" ${file}
-  log "${YELLOW}${file}${BLUE}: Replaced BOOSTER_VERSION token by ${booster_version}"
+  sed -i.bak -e "s/RUNTIME_VERSION/\${RUNTIME_VERSION}/g" ${file}
+    perl -pi -e "undef $/; s/parameters\:/parameters\:
+- name: RUNTIME_VERSION
+  displayName: OpenJDK 8 image version to use
+  description: Specifies which version of the OpenShift OpenJDK 8 image to use
+  value: ${runtime_version}
+  required: true/" ${file}
+    log "${YELLOW}${file}${BLUE}: Replaced RUNTIME_VERSION token by \${RUNTIME_VERSION}"
 
   rm ${file}.bak
+}
+
+update_templates() {
+    templates=( $(find_openshift_templates) )
+
+    if [ ${#templates[@]} != 0 ]; then
+        for file in ${templates[@]}
+        do
+            local runtime=$(determine_highest_runtime_version_of_image 'registry.access.redhat.com/redhat-openjdk-18/openjdk18-openshift')
+            replace_template_placeholders ${file} ${runtime}
+        done
+        if [[ $(git status --porcelain) ]]; then
+            commit "Replaced templates placeholders: RUNTIME_VERSION -> ${runtime}"
+        else
+            # if no changes were made it means that templates don't contain tokens and should be fixed
+            log_ignored "Couldn't replace tokens in templates"
+            return 1
+        fi
+    fi
+
 }
 
 # Extracts the image that is used in a template
@@ -398,8 +420,6 @@ determine_highest_runtime_version_of_image_in_template() {
   local imageFromFile=$(get_image_from_template ${file})
   echo $(determine_highest_runtime_version_of_image ${imageFromFile})
 }
-
-
 
 release() (
     verify_maven_project_setup
