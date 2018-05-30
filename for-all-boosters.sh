@@ -400,6 +400,40 @@ determine_highest_runtime_version_of_image_in_template() {
 }
 
 
+# Based on https://stackoverflow.com/a/4025065
+# Returns 0 if both versions are equal, 1 if the first argument is greater, 2 if the second argument is greater
+version_compare() {
+    if [[ $1 == $2 ]]
+    then
+        return 0
+    fi
+    local IFS=.
+    local i ver1=($1) ver2=($2)
+    # fill empty fields in ver1 with zeros
+    for (( i = ${#ver1[@]}; i < ${#ver2[@]}; i ++ ))
+    do
+        ver1[i]=0
+    done
+    for ((i=0; i<${#ver1[@]}; i++ ))
+    do
+        if [[ -z ${ver2[i]} ]]
+        then
+            # fill empty fields in ver2 with zeros
+            ver2[i]=0
+        fi
+        if ((10#${ver1[i]} > 10#${ver2[i]}))
+        then
+            log "$1 > $2"
+            return 1
+        fi
+        if ((10#${ver1[i]} < 10#${ver2[i]}))
+        then
+            log "$1 < $2"
+            return 2
+        fi
+    done
+    return 0
+}
 
 release() (
     verify_maven_project_setup
@@ -434,8 +468,24 @@ release() (
         # check that booster version is greater than latest tag
         local -r latestTag=$(get_latest_tag)
         if [[ "${latestTag}" =~ ${versionRE} ]]; then
-            local -r tagVersion=${BASH_REMATCH[2]}
-            if ((tagVersion >= versionInt)); then
+            local error=0
+            # first check SB version
+            local -r tagSBVersion=${BASH_REMATCH[1]}
+            local comparison=$(version_compare ${tagSBVersion} ${sbVersion})
+
+            case ${comparison} in
+                1)
+                    error=1
+                ;;
+                0)
+                # if SB versions are equal, check sub-version
+                    local -r tagVersion=${BASH_REMATCH[2]}
+                    if ((tagVersion >= versionInt)); then
+                        error=1
+                    fi
+                ;;
+            esac
+            if ((error == 1)); then
                 log_failed "Booster version '${YELLOW}${currentVersion}${RED}' is older than latest released version '${YELLOW}${latestTag}${RED}'"
                 return 1
             fi
