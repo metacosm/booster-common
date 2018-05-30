@@ -1003,14 +1003,14 @@ do
                   fi
 
                   if [ "$bypassUpdate" == off ]; then
+                      git fetch -q "${remote}" > /dev/null
+
                       if [ "$IGNORE_LOCAL_CHANGES" != on ]; then
                           # if booster has uncommitted changes, skip it
                           if [[ $(git status --porcelain) ]]; then
                               log_ignored "You have uncommitted changes, please stash these changes"
                               continue
                           fi
-
-                          git fetch -q "${remote}" > /dev/null
 
                           git checkout -q "${BRANCH}" > /dev/null && git rebase "${remote}"/"${BRANCH}" > /dev/null
                       else
