@@ -372,12 +372,12 @@ replace_template_placeholders() {
 }
 
 # Extracts the image that is used in a template
-# assumes that the ImageStream is named 'runtime'
+# assumes that the ImageStream name starts with 'runtime'
 # and the tag containing the image is named 'RUNTIME_VERSION'
 # An example output could be: registry.access.redhat.com/redhat-openjdk-18/openjdk18-openshift
 get_image_from_template() {
   local file=${1}
-  echo $(yq -r '.objects[] | select(.kind == "ImageStream") | select(.metadata.name == "runtime") | .spec.tags[] | select(.name == "RUNTIME_VERSION") | .from.name' ${file} | cut -f1 -d":")
+  echo $(yq -r '.objects[] | select(.kind == "ImageStream") | select(.metadata.name | startswith("runtime")) | .spec.tags[] | select(.name == "RUNTIME_VERSION") | .from.name' ${file} | cut -f1 -d":")
 }
 
 # Determines what the highest tag is for an image
@@ -562,7 +562,13 @@ release() (
             else
               runtime=$(determine_highest_runtime_version_of_image_in_template ${file})
             fi
-            replace_template_placeholders ${file} ${runtime} ${releaseVersion}
+            if [ -z "$runtime" ]
+            then
+              log_ignored "Unable to determine runtime version"
+              return 1
+            else
+              replace_template_placeholders ${file} ${runtime} ${releaseVersion}
+            fi
         done
         if [[ $(git status --porcelain) ]]; then
             commit "Replaced templates placeholders: RUNTIME_VERSION -> ${runtime}, BOOSTER_VERSION -> ${releaseVersion}"
