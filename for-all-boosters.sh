@@ -226,7 +226,7 @@ change_version() {
         newVersion=$(compute_new_version ${expr})
     fi
 
-    currentVersion=$(evaluate_mvn_expr ${expr})
+    local -r currentVersion=$(evaluate_mvn_expr ${expr})
     local cmd="mvn $(maven_settings) versions:set -DnewVersion=${newVersion} > /dev/null"
     if [ "${targetParent}" == true ]; then
         local escapedCurrent=$(sed 's|[]\/$*.^[]|\\&|g' <<< ${currentVersion})
