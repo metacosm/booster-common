@@ -35,7 +35,12 @@ An example invocation that includes all the available features would be:
 
 To see more information about the script invoke:
 
-`groovy update-pom.groovy` 
+`groovy update-pom.groovy`
+
+## Important Notes on development
+
+When developing new features for any of these scripts, it is very important to test both with single module and multi module projects.
+Multi-module Maven projects are often a source of bugs in the scripts  
 
 
 ## Steps to almost complete automated release
