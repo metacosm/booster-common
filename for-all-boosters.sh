@@ -617,22 +617,32 @@ do_revert() {
   git clean -f -d
 }
 
+# Asks to confirm the action passed as first argument and returns the value the user passed or `Y` if confirmation is skipped.
+# Based on https://stackoverflow.com/a/1989633
+# Note that it's important to send all output to `stderr / &2` since otherwise it interferes with the return value
+confirm() {
+    local answer='N'
+    local action=${1:-revert}
+
+    if [[ "$CONFIRMATION_NEEDED" == on ]]; then
+        log "Are you sure you want to ${action}?" >&2
+        log "${RED}YOU WILL LOSE ALL UNPUSHED LOCAL COMMITS SO BE CAREFUL!" >&2
+        log "Press ${RED}Y to ${action}${BLUE} or ${YELLOW}any other key to leave the booster as-is." >&2
+        read answer
+    else
+        answer='Y'
+    fi
+
+    echo ${answer}
+}
+
 revert() {
     if [[ $(git status --porcelain) ]]; then
         log "${RED}DANGER: YOU HAVE UNCOMMITTED CHANGES:"
         git status --porcelain
     fi
 
-    local answer='N'
-    if [[ "$CONFIRMATION_NEEDED" == on ]]; then
-      log "Are you sure you want to revert ${YELLOW}${BRANCH}${BLUE} branch to the ${YELLOW}${remote}${BLUE} remote state?"
-      log "${RED}YOU WILL LOSE ALL UNPUSHED LOCAL COMMITS SO BE CAREFUL!"
-      log "Press ${RED}Y to revert${BLUE} or ${YELLOW}any other key to leave the booster as-is."
-      read answer
-    else
-      answer='Y'
-    fi
-
+    local -r answer=$(confirm)
     if [ "${answer}" == Y ]; then
         log "Resetting to remote ${remote} state"
         do_revert
@@ -749,6 +759,36 @@ run_cmd() {
             commit "${msg}"
             push_to_remote
         fi
+    fi
+}
+
+revert_release() {
+    # release process creates 4 commits that we need to revert
+    git revert --no-commit HEAD~4..
+    local -r previousSHA=$(git rev-list HEAD~5..HEAD~4)
+    local -r previousMsg=$(git log -1 --format="%h: %s" ${previousSHA})
+    log "About to revert state to commit -> ${previousMsg}"
+
+    # ask confirmation before reverting
+    local answer=$(confirm "revert to before last release")
+    if [ "${answer}" == Y ]; then
+        commit "Revert to ${previousMsg}"
+        push_to_remote
+
+        # delete tag
+        local -r tag=$(get_latest_tag)
+        answer=$(confirm "delete ${tag} locally and on remote")
+        if [ "${answer}" == Y ]; then
+            if [[ "$PUSH" == on ]]; then
+                git push --delete ${remote} ${tag}
+            fi
+            git tag -d ${tag}
+        else
+            log "Tag deletion aborted"
+        fi
+    else
+        git revert --abort
+        log "Revert aborted"
     fi
 }
 
