@@ -792,6 +792,26 @@ revert_release() {
     fi
 }
 
+set_maven_property() {
+    local -r propertyName=${1}
+    local -r propertyValue=${2}
+
+    if ! grep --quiet '<properties>' pom.xml; then
+      # add an empty properties section right before the dependencies section
+      sed -i.bak -e "s/<dependencies>/<properties>\n  <\/properties>\n\n  <dependencies>/g" pom.xml
+    fi
+
+    if ! grep --quiet "<${1}>" pom.xml; then
+      # add the property as the last property in the properties section with a dummy value
+      sed -i.bak -e "s/<\/properties>/  <${propertyName}>replaceme<\/${propertyName}>\n  <\/properties>/g" pom.xml
+    fi
+
+     # replace the actual property
+     sed -i.bak "s/${propertyName}>.*</${propertyName}>${propertyValue}</g" pom.xml
+
+    rm pom.xml.bak
+}
+
 show_help () {
     simple_log "This scripts executes the given command on all local boosters (identified by the 'spring-boot-*-booster' pattern) found in the current directory."
     simple_log "Usage:"
@@ -815,6 +835,7 @@ show_help () {
     simple_log "    revert                        Revert the booster state to the last remote version."
     simple_log "    script <path to script>       Run provided script."
     simple_log "    run_smoke_tests               Run the unit tests locally."
+    simple_log "    set_maven_property <property name> <property value>           Set a Maven property. Works whether the property exists or not (even if the properties section does not exist)"
     simple_log "    catalog                       Re-generate the catalog file."
     echo
 }
@@ -1000,6 +1021,14 @@ case "$subcommand" in
     ;;
     run_smoke_tests)
         cmd="run_smoke_tests"
+    ;;
+    set_maven_property)
+        shift
+        if [ -n "$2" ]; then
+            cmd="set_maven_property $1 $2"
+        else
+            error "Must provide a property name and a property value"
+        fi
     ;;
     cmd)
         # Needed in order to "reset" the options processing for the subcommand
