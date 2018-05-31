@@ -286,7 +286,7 @@ setup_booster_locally () {
       pushd ${booster_name} > /dev/null
       git fetch -q ${remote}
       BRANCH=$(git rev-parse --abbrev-ref HEAD)
-      revert
+      revert "log_without_branch" true
       unset BRANCH
     fi
 
@@ -613,8 +613,14 @@ release() (
 )
 
 do_revert() {
-  git reset --hard "${remote}"/"${BRANCH}"
-  git clean -f -d
+  local -r silence=${1:-false}
+  local general_git_options=""
+  if ${silence} ; then
+    general_git_options=" -q ${general_git_options} "
+  fi
+
+  git reset  ${general_git_options} --hard "${remote}"/"${BRANCH}"
+  git clean ${general_git_options} -f -d
 }
 
 # Asks to confirm the action passed as first argument and returns the value the user passed or `Y` if confirmation is skipped.
@@ -637,17 +643,19 @@ confirm() {
 }
 
 revert() {
+    log_function=${1:-"log"}
+    local -r silence_git=${2:-false}
     if [[ $(git status --porcelain) ]]; then
-        log "${RED}DANGER: YOU HAVE UNCOMMITTED CHANGES:"
+        ${log_function} "${RED}DANGER: YOU HAVE UNCOMMITTED CHANGES:"
         git status --porcelain
     fi
 
     local -r answer=$(confirm)
     if [ "${answer}" == Y ]; then
-        log "Resetting to remote ${remote} state"
-        do_revert
+        ${log_function} "Resetting to remote ${remote} state"
+        do_revert ${silence_git}
     else
-        log "Leaving as-is"
+        ${log_function} "Leaving as-is"
     fi
 }
 
