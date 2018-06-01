@@ -22,3 +22,6 @@
 ./for-all-boosters.sh -fb master-no-parent script "$(pwd)/playground/pom/add-profiles.sh"
 ./for-all-boosters.sh -fb master-no-parent cmd "git commit -q -am 'Set profiles section'"
 # Make necessary manual modifications
+
+./for-all-boosters.sh -fb master-no-parent script "$(pwd)/playground/pom/fix-groupId.sh"
+./for-all-boosters.sh -fb master-no-parent cmd "git commit -q -am 'Fix groupId'"
