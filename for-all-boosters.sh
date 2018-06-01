@@ -811,13 +811,13 @@ set_maven_property() {
 
       if xq -e '.project.dependencies' pom.xml > /dev/null; then
         # add an empty properties section right before the dependencies section
-        perl -pi.back -e '!$x && s/<dependencies>/<properties>\n  <\/properties>\n\n  <dependencies>/g && ($x=1)' pom.xml
+        perl -pi.bak -e '!$x && s/<dependencies>/<properties>\n  <\/properties>\n\n  <dependencies>/g && ($x=1)' pom.xml
       elif xq -e '.project.description' pom.xml > /dev/null; then
         # add an empty properties section right after the description section
-        perl -pi.back -e '!$x && s/<\/description>/<\/description>\n\n  <properties>\n  <\/properties>/g && ($x=1)' pom.xml
+        perl -pi.bak -e '!$x && s/<\/description>/<\/description>\n\n  <properties>\n  <\/properties>/g && ($x=1)' pom.xml
       else
         # add an empty properties section right after the artifactId section
-        perl -pi.back -e '!$x && s/<\/artifactId>/<\/artifactId>\n\n  <properties>\n  <\/properties>/g && ($x=1)' pom.xml
+        perl -pi.bak -e '!$x && s/<\/artifactId>/<\/artifactId>\n\n  <properties>\n  <\/properties>/g && ($x=1)' pom.xml
       fi
 
     fi
