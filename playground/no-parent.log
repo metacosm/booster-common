@@ -1,0 +1,24 @@
+./for-all-boosters.sh -b master-no-parent create_branch
+
+./for-all-boosters.sh -fb master-no-parent cmd "sed -i.bak 's/spring-boot-booster-parent/booster-parent/g; s/>1.5.13-2</>22</g' pom.xml && rm pom.xml.bak"
+./for-all-boosters.sh -fb master-no-parent cmd "git commit -q -am 'Replace SB booster parent with generic booster parent'"
+
+./for-all-boosters.sh -fb master-no-parent set_maven_property "arquillian.version" "1.4.0.Final"
+./for-all-boosters.sh -fb master-no-parent set_maven_property "junit.version" "4.12"
+./for-all-boosters.sh -fb master-no-parent set_maven_property "spring-boot-bom.version" "1.5.13.Final"
+./for-all-boosters.sh -fb master-no-parent set_maven_property "spring-boot.version" "1.5.13.RELEASE"
+./for-all-boosters.sh -fb master-no-parent cmd "git commit -q -am 'Add basic properties that were in SB parent'"
+
+./for-all-boosters.sh -fb master-no-parent script "$(pwd)/playground/pom/add-dependency-management.sh"
+./for-all-boosters.sh -fb master-no-parent cmd "git commit -q -am 'Set dependencyManagement section'"
+
+./for-all-boosters.sh -fb master-no-parent script "$(pwd)/playground/pom/add-licenses.sh"
+./for-all-boosters.sh -fb master-no-parent cmd "git commit -q -am 'Set licenses section'"
+
+./for-all-boosters.sh -fb master-no-parent script "$(pwd)/playground/pom/add-build.sh"
+./for-all-boosters.sh -fb master-no-parent cmd "git commit -q -am 'Set build section that is safe to automatically set'"
+# Make necessary manual modifications
+
+./for-all-boosters.sh -fb master-no-parent script "$(pwd)/playground/pom/add-profiles.sh"
+./for-all-boosters.sh -fb master-no-parent cmd "git commit -q -am 'Set profiles section'"
+# Make necessary manual modifications
