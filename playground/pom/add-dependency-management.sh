@@ -27,7 +27,7 @@ fi
 
 
 #these are the dependencies that need to be added to the dependencyManagement section
-newDeps='[ { "groupId": "me.snowdrop", "artifactId": "spring-boot-bom", "version": "${spring-boot-bom.version}", "type": "pom", "scope": "import" }, { "groupId": "org.jboss.arquillian", "artifactId": "arquillian-bom", "version": "${arquillian.version}", "type": "pom", "scope": "import" }, { "groupId": "junit", "artifactId": "junit", "version": "${junit.version}", "scope": "import" } ]'
+newDeps='[ { "groupId": "me.snowdrop", "artifactId": "spring-boot-bom", "version": "${spring-boot-bom.version}", "type": "pom", "scope": "import" }, { "groupId": "org.jboss.arquillian", "artifactId": "arquillian-bom", "version": "${arquillian.version}", "type": "pom", "scope": "import" }, { "groupId": "junit", "artifactId": "junit", "version": "${junit.version}", "scope": "test" } ]'
 
 #read the existing dependency management section in pom
 existingDM=$(xq -c '.project.dependencyManagement.dependencies.dependency' pom.xml)
