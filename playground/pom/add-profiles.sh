@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 ####
-# Safely sets the build section of a POM. Safely means that it only applies section that we know don't exist in the boosters
+# Safely sets the profiles section of a POM.
 #
 # args: The directory where the pom is to be located as POM_DIRECTORY. If not supplied it's assumed to be the current directory is assumed
 #
@@ -90,7 +90,7 @@ EOF
       r profiles-content.xml
   }' pom.xml
 
-  rm pom.xml.bak profiles-content.xml
+  rm pom.xml.bak dummy.xml profiles-content.xml
 else
   echo "Pom ${pom_directory}/pom.xml needs manual updates since we can't safely replace"
 fi
