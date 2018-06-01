@@ -804,18 +804,31 @@ set_maven_property() {
     local -r propertyName=${1}
     local -r propertyValue=${2}
 
-    if ! grep --quiet '<properties>' pom.xml; then
-      # add an empty properties section right before the dependencies section
-      sed -i.bak -e "s/<dependencies>/<properties>\n  <\/properties>\n\n  <dependencies>/g" pom.xml
+    # We are using perl to do all replacements since we need to make sure that we only replace the first occurrence in the file
+    # See https://stackoverflow.com/a/6278174/2504224
+
+    if ! xq -e '.project.properties' pom.xml > /dev/null; then
+
+      if xq -e '.project.dependencies' pom.xml > /dev/null; then
+        # add an empty properties section right before the dependencies section
+        perl -pi.back -e '!$x && s/<dependencies>/<properties>\n  <\/properties>\n\n  <dependencies>/g && ($x=1)' pom.xml
+      elif xq -e '.project.description' pom.xml > /dev/null; then
+        # add an empty properties section right after the description section
+        perl -pi.back -e '!$x && s/<\/description>/<\/description>\n\n  <properties>\n  <\/properties>/g && ($x=1)' pom.xml
+      else
+        # add an empty properties section right after the artifactId section
+        perl -pi.back -e '!$x && s/<\/artifactId>/<\/artifactId>\n\n  <properties>\n  <\/properties>/g && ($x=1)' pom.xml
+      fi
+
     fi
 
     if ! grep --quiet "<${1}>" pom.xml; then
       # add the property as the last property in the properties section with a dummy value
-      sed -i.bak -e "s/<\/properties>/  <${propertyName}>replaceme<\/${propertyName}>\n  <\/properties>/g" pom.xml
+      perl -pi.bak -e "!\$x && s/<\/properties>/  <${propertyName}>replaceme<\/${propertyName}>\n  <\/properties>/g && (\$x=1)" pom.xml
     fi
 
-     # replace the actual property
-     sed -i.bak "s/${propertyName}>.*</${propertyName}>${propertyValue}</g" pom.xml
+    # replace the actual property
+    perl -pi.bak -e "!\$x && s/${propertyName}>.*</${propertyName}>${propertyValue}</g && (\$x=1)" pom.xml
 
     rm pom.xml.bak
 }
