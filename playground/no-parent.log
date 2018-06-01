@@ -25,3 +25,6 @@
 
 ./for-all-boosters.sh -fb master-no-parent script "$(pwd)/playground/pom/fix-groupId.sh"
 ./for-all-boosters.sh -fb master-no-parent cmd "git commit -q -am 'Fix groupId'"
+
+#manually fix dependencies
+./for-all-boosters.sh -fb master-no-parent cmd "git commit -q -am 'Manually fix dependencies'"
