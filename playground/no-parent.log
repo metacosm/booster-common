@@ -26,5 +26,12 @@
 ./for-all-boosters.sh -fb master-no-parent script "$(pwd)/playground/pom/fix-groupId.sh"
 ./for-all-boosters.sh -fb master-no-parent cmd "git commit -q -am 'Fix groupId'"
 
-#manually fix dependencies
+# MANUALLY fix dependencies
+
+./for-all-boosters.sh -fb master-no-parent set_maven_property "awaitility.version" "1.7.0"
+./for-all-boosters.sh -fb master-no-parent set_maven_property "rest-assured.version" "2.9.0"
 ./for-all-boosters.sh -fb master-no-parent cmd "git commit -q -am 'Manually fix dependencies'"
+
+# MANUALLY fix profiles indendation
+
+
