@@ -453,18 +453,6 @@ release() (
         local qualifier=${BASH_REMATCH[3]}
         local snapshot=${BASH_REMATCH[4]}
 
-        # check that parent and booster use the same Spring Boot version
-        local -r parentVersion=$(evaluate_mvn_expr 'project.parent.version')
-        local parentVersionInt
-        if [[ "${parentVersion}" =~ ${versionRE} ]]; then
-            local -r parentSBVersion=${BASH_REMATCH[1]}
-            parentVersionInt=${BASH_REMATCH[2]}
-            if [ "$parentSBVersion" != "$sbVersion" ]; then
-                log_failed "Booster uses '${YELLOW}${sbVersion}${RED}' Spring Boot version while parent uses '${YELLOW}${parentSBVersion}${RED}'"
-                return 1
-            fi
-        fi
-
         # check that booster version is greater than latest tag
         local -r latestTag=$(get_latest_tag)
         if [[ "${latestTag}" =~ ${versionRE} ]]; then
@@ -490,30 +478,6 @@ release() (
                 return 1
             fi
         fi
-
-        # inner function to retrieve parent's latest tag
-        # see https://stackoverflow.com/a/31316688
-        getLatestParentTagForSBVersion() {
-            local -r sbVersion=${1:?"Specify target Spring Boot version"}
-            local -r boosterParentDir='spring-boot-booster-parent'
-            if [ ! -d "${boosterParentDir}" ]; then
-                git clone -q 'git@github.com:snowdrop/spring-boot-booster-parent.git' ${boosterParentDir} > /dev/null 2>&1
-            fi
-            # todo: change branch on parent code based on Spring Boot version when we start supporting different SB versions
-            echo $(get_latest_tag ${boosterParentDir})
-        }
-
-        # check that we're using the latest available parent for this particular SB version
-        pushd ${WORK_DIR} > /dev/null
-        local -r latestParentTag=$(getLatestParentTagForSBVersion ${sbVersion})
-        if [[ "${latestParentTag}" =~ ${versionRE} ]]; then
-            local -r parentTagVersion=${BASH_REMATCH[2]}
-            if ((parentTagVersion != parentVersionInt)); then
-                log_failed "Booster parent version '${YELLOW}${parentVersion}${RED}' does not match latest released version '${YELLOW}${latestParentTag}${RED}'"
-                return 1
-            fi
-        fi
-        popd > /dev/null
 
 
         # needed because when no qualifier exists, the regex captures this is different order
