@@ -842,7 +842,7 @@ show_help () {
     simple_log "    -f                            Bypass check for local changes, forcing execution if changes exist."
     simple_log "    -h                            Display this help message."
     simple_log "    -l                            Specify where the local copies of the boosters should be found. Defaults to current working directory."
-    simple_log "    -m                            The boosters to operate on (comma separated value). Boosters are effectively white-listed in this mode. The name of each booster can is the simple booster name (for example: circuit-breaker). Using '-' in front of the names inverts the booster selection (boosters are effectively black-listed)"
+    simple_log "    -m                            The boosters to operate on (comma separated value). Boosters are effectively white-listed in this mode. The name of each booster is the simple booster name (for example: circuit-breaker). Using '-' in front of the names inverts the booster selection (boosters are effectively black-listed)"
     simple_log "    -n                            Skip confirmation dialogs"
     simple_log "    -p                            Perform booster local setup"
     simple_log "    -r                            The name of the git remote to use for the boosters, for example upstream or origin. The default value is ${default_remote}"
