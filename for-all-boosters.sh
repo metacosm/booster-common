@@ -92,9 +92,7 @@ evaluate_mvn_expr() {
 }
 
 current_branch() {
-    currentBranch=${branch:-$BRANCH}
-    echo ${currentBranch}
-    unset currentBranch
+    echo $(git rev-parse --abbrev-ref HEAD)
 }
 
 log() {
@@ -118,8 +116,8 @@ log_failed() {
 }
 
 push_to_remote() {
-    currentBranch=${branch:-$BRANCH}
-    local remoteToPushTo=${1}
+    currentBranch=$(current_branch)
+    local remoteToPushTo=${1:-$remote}
     options=${2:-}
 
     if [[ "$PUSH" == on ]]; then
@@ -308,7 +306,7 @@ setup_booster_locally () {
 }
 
 create_branch() {
-    branch=${1:-$BRANCH}
+    local branch=${1:-$BRANCH}
 
     if git ls-remote --heads "${remote}" "${branch}" | grep "${branch}" > /dev/null;
     then
@@ -321,8 +319,9 @@ create_branch() {
             return 1
         fi
     fi
+    log "Created branch"
 
-    unset branch # unset to avoid side-effects in log
+#    unset branch # unset to avoid side-effects in log
 }
 
 delete_branch() {
@@ -373,7 +372,11 @@ replace_template_placeholders() {
 
 update_templates() {
     # first create branch to commit the changes so that we can test them using the current branch as starting point
-    create_branch "${branch}-template-parameter-for-runtime"
+
+    local -r baseBranch=${BRANCH}
+    if ! create_branch "${BRANCH}-template-parameter-for-runtime"; then
+        return 1
+    fi
 
     templates=( $(find_openshift_templates) )
     local runtime=$(determine_highest_runtime_version_of_image 'registry.access.redhat.com/redhat-openjdk-18/openjdk18-openshift')
@@ -392,9 +395,11 @@ update_templates() {
 
             rm ${file}.bak
         done
+
         if [[ $(git status --porcelain) ]]; then
-            commit "Replaced templates placeholders: RUNTIME_VERSION -> ${runtime}"
+            commit "Replace templates placeholders: RUNTIME_VERSION -> ${runtime}"
             push_to_remote
+            hub pull-request -m "SB-658: replace RUNTIME_VERSION tokens by template parameters" -b ${baseBranch}
         else
             # if no changes were made it means that templates don't contain tokens and should be fixed
             log_failed "Couldn't replace tokens in templates"
