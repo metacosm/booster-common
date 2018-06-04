@@ -24,7 +24,6 @@ if [ -n "${POM_DIRECTORY}" ]; then
   pushd ${pom_directory} > /dev/null
 fi
 
-licensePlugin='{"id":"licenses","build":{"plugins":{"plugin":[{"groupId":"org.codehaus.mojo","artifactId":"license-maven-plugin"},{"groupId":"org.codehaus.mojo","artifactId":"xml-maven-plugin"}]}}}'
 openshiftPlugin='{"id":"openshift","build":{"plugins":{"plugin":{"groupId":"io.fabric8","artifactId":"fabric8-maven-plugin","executions":{"execution":{"id":"fmp","goals":{"goal":["resource","build"]}}}}}}}'
 openshiftItPlugin='{"id":"openshift-it","build":{"plugins":{"plugin":{"groupId":"org.apache.maven.plugins","artifactId":"maven-failsafe-plugin"}}}}'
 
