@@ -180,6 +180,7 @@ get_latest_tag() {
 
 # check that first arg is contained in array second arg
 # see: https://stackoverflow.com/a/8574392
+# returns 0 if found, 1 if not
 element_in() {
     local e match="$1"
     shift
@@ -841,7 +842,7 @@ show_help () {
     simple_log "    -f                            Bypass check for local changes, forcing execution if changes exist."
     simple_log "    -h                            Display this help message."
     simple_log "    -l                            Specify where the local copies of the boosters should be found. Defaults to current working directory."
-    simple_log "    -m                            The boosters to operate on (comma separated value). The name of each booster can either be the full booster name, or the simple booster name (for example: circuit-breaker) Not selecting this option means that all boosters will be operated on."
+    simple_log "    -m                            The boosters to operate on (comma separated value). Boosters are effectively white-listed in this mode. The name of each booster can is the simple booster name (for example: circuit-breaker). Using '-' in front of the names inverts the booster selection (boosters are effectively black-listed)"
     simple_log "    -n                            Skip confirmation dialogs"
     simple_log "    -p                            Perform booster local setup"
     simple_log "    -r                            The name of the git remote to use for the boosters, for example upstream or origin. The default value is ${default_remote}"
@@ -897,6 +898,10 @@ readonly default_remote=upstream
 remote=${default_remote}
 
 declare -a explicitly_selected_boosters=( )
+# zero means that no selection type has been make (and therefore all boosters will be operated on)
+# a negative value means that all boosters except the explicitly selected ones will be operated on
+# a positive value means that only the explicitly selected boosters will be operated on
+selection_type=0
 
 # See https://sookocheff.com/post/bash/parsing-bash-script-arguments-with-shopts/
 while getopts ":hdnfspb:r:m:l:" opt; do
@@ -954,6 +959,29 @@ while getopts ":hdnfspb:r:m:l:" opt; do
         ;;
         m)
             IFS=',' read -r -a explicitly_selected_boosters <<< "$OPTARG"
+            inclBoosters=0
+            exclBoosters=0
+            # determine the number of explicitly enabled and explicitly disabled boosters
+            for i in "${explicitly_selected_boosters[@]}"
+            do
+              if [[ "$i" =~ ^-.* ]]; then #if the element starts with '-' it has been disabled
+                exclBoosters=$((exclBoosters-1))
+              else
+                inclBoosters=$((inclBoosters+1))
+              fi
+            done
+
+            # iff both there were both explicitly enabled and explicitly disabled boosters,
+            # inclBoosters * exclBoosters will be non-zero
+            # such a case isn't supported since it doesn't make sense
+            if (( $((${inclBoosters} * ${exclBoosters})) != 0 ))
+            then
+              echo -e "${RED}== Either explicitly include or explicitly exclude boosters - Mixing the two types does not make sense and it therefore not supported  ==${NC}"
+              exit 1
+            else
+              selection_type=$(($inclBoosters + $exclBoosters))
+            fi
+
             echo -e "${YELLOW}== Will use '${BLUE}$OPTARG${YELLOW}' booster(s) ==${NC}"
             echo
         ;;
@@ -1112,13 +1140,18 @@ do
     if [[ ${BOOSTER} =~ spring-boot-(.*)-booster ]]; then #this will always be true, but is used in order to capture the simple name
         booster_simple_name=${BASH_REMATCH[1]}
 
-        # The following matches if no explicit boosters have been set
-        # or if the simple booster name (meaning the part without 'spring-boot-' and '-booster')
-        # matches one of the explicitly selected boosters
-        # For example if the explicitly selected boosters are circuit-breaker and http then
-        # then spring-boot-circuit-breaker-booster would match,
-        # while spring-boot-crud-booster would not
-        if [ ${#explicitly_selected_boosters[@]} -eq 0 ] || [[ "${explicitly_selected_boosters[@]}" =~ "${booster_simple_name}" ]]; then
+        # We process the boosters when one of the following conditions is true
+        # 1) the user made no explicit booster selections (therefore all boosters are processed)
+        # 2) the user explicitly included the booster using it's simple name (the part without 'spring-boot-' and '-booster')
+        # 3) the user did not include the simple booster name in the explicitly excluded boosters
+        should_process=true
+        if (( ${selection_type} > 0 )) && ! element_in "${booster_simple_name}" "${explicitly_selected_boosters[@]}"; then
+          should_process=false
+        elif (( ${selection_type} < 0 )) && element_in "-${booster_simple_name}" "${explicitly_selected_boosters[@]}"; then
+          should_process=false
+        fi
+
+        if [ "$should_process" = true ] ; then
           echo -e "${BLUE}> ${YELLOW}${BOOSTER}${BLUE}${NC}"
 
           if [[ "$PERFORM_BOOSTER_LOCAL_SETUP" == on ]]; then
