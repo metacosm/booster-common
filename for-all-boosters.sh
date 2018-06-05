@@ -974,12 +974,12 @@ while getopts ":hdnfspb:r:m:l:" opt; do
             # iff both there were both explicitly enabled and explicitly disabled boosters,
             # inclBoosters * exclBoosters will be non-zero
             # such a case isn't supported since it doesn't make sense
-            if (( $((${inclBoosters} * ${exclBoosters})) != 0 ))
+            if (( $((inclBoosters * exclBoosters)) != 0 ))
             then
               echo -e "${RED}== Either explicitly include or explicitly exclude boosters - Mixing the two types does not make sense and it therefore not supported  ==${NC}"
               exit 1
             else
-              selection_type=$(($inclBoosters + $exclBoosters))
+              selection_type=$((inclBoosters + exclBoosters))
             fi
 
             echo -e "${YELLOW}== Will use '${BLUE}$OPTARG${YELLOW}' booster(s) ==${NC}"
@@ -1145,9 +1145,9 @@ do
         # 2) the user explicitly included the booster using it's simple name (the part without 'spring-boot-' and '-booster')
         # 3) the user did not include the simple booster name in the explicitly excluded boosters
         should_process=true
-        if (( ${selection_type} > 0 )) && ! element_in "${booster_simple_name}" "${explicitly_selected_boosters[@]}"; then
+        if ((selection_type > 0)) && ! element_in "${booster_simple_name}" "${explicitly_selected_boosters[@]}"; then
           should_process=false
-        elif (( ${selection_type} < 0 )) && element_in "-${booster_simple_name}" "${explicitly_selected_boosters[@]}"; then
+        elif ((selection_type < 0)) && element_in "-${booster_simple_name}" "${explicitly_selected_boosters[@]}"; then
           should_process=false
         fi
 
