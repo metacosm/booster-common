@@ -58,7 +58,7 @@ CONFIRMATION_NEEDED='on'
 RUN_TESTS='on'
 
 # boosters directory (where all the local booster copies are located), defaults to working dir
-BOOSTERS_DIR=$(pwd)
+export BOOSTERS_DIR=$(pwd)
 
 # failed boosters
 declare -a failed=( )
@@ -851,7 +851,7 @@ show_help () {
     simple_log "    run_integration_tests <deployment type>  Run the integration tests on an OpenShift cluster. Requires to be logged in to the required cluster before executing. Deployment Type can be either fmp_deploy (default) or s2i_deploy"
     simple_log "    create_branch <branch name>   Create a branch."
     simple_log "    delete_branch <branch name>   Delete a branch."
-    simple_log "    cmd <command>                 Execute the provided shell command."
+    simple_log "    cmd <command>                 Execute the provided shell command. The following environment variables can be used by the scripts: BOOSTER, BOOSTER_DIR, BRANCH"
     simple_log "    fn <function name>            Execute the specified function. This allows to call internal functions. Make sure you know what you're doing!"
     simple_log "    revert                        Revert the booster state to the last remote version."
     simple_log "    script <path to script>       Run provided script."
@@ -1107,7 +1107,7 @@ pushd ${BOOSTERS_DIR} > /dev/null
 for booster_line in ${all_boosters_from_github[@]}
 do
     IFS=',' read -r -a booster_parts <<< "${booster_line}"
-    BOOSTER=${booster_parts[0]}
+    export BOOSTER=${booster_parts[0]}
     BOOSTER_GIT_URL=${booster_parts[1]}
     if [[ ${BOOSTER} =~ spring-boot-(.*)-booster ]]; then #this will always be true, but is used in order to capture the simple name
         booster_simple_name=${BASH_REMATCH[1]}
@@ -1135,6 +1135,7 @@ do
           else
               for BRANCH in "${branches[@]}"
               do
+                  export BRANCH
                   bypassUpdate='off'
                   # check if branch exists, otherwise skip booster
                   if [ "$CREATE_BRANCH" != on ] && ! git show-ref --verify --quiet refs/heads/${BRANCH}; then
