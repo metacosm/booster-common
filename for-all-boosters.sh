@@ -842,7 +842,8 @@ show_help () {
     simple_log "    -f                            Bypass check for local changes, forcing execution if changes exist."
     simple_log "    -h                            Display this help message."
     simple_log "    -l                            Specify where the local copies of the boosters should be found. Defaults to current working directory."
-    simple_log "    -m                            The boosters to operate on (comma separated value). Boosters are effectively white-listed in this mode. The name of each booster is the simple booster name (for example: circuit-breaker). Using '-' in front of the names inverts the booster selection (boosters are effectively black-listed)"
+    simple_log "    -m                            The boosters to operate on (comma separated value). Boosters are effectively white-listed in this mode. The name of each booster is the simple booster name (for example: circuit-breaker). This can't be used together with the '-x' option"
+    simple_log "    -x                            The boosters to exclude (comma separated value). Boosters are effectively black-listed in this mode. The name of each booster is the simple booster name (for example: circuit-breaker). This can't be used together with the '-m' option"
     simple_log "    -n                            Skip confirmation dialogs"
     simple_log "    -p                            Perform booster local setup"
     simple_log "    -r                            The name of the git remote to use for the boosters, for example upstream or origin. The default value is ${default_remote}"
@@ -904,7 +905,7 @@ declare -a explicitly_selected_boosters=( )
 selection_type=0
 
 # See https://sookocheff.com/post/bash/parsing-bash-script-arguments-with-shopts/
-while getopts ":hdnfspb:r:m:l:" opt; do
+while getopts ":hdnfspb:r:m:x:l:" opt; do
     case ${opt} in
         h)
             show_help
@@ -958,31 +959,25 @@ while getopts ":hdnfspb:r:m:l:" opt; do
             RUN_TESTS='off'
         ;;
         m)
-            IFS=',' read -r -a explicitly_selected_boosters <<< "$OPTARG"
-            inclBoosters=0
-            exclBoosters=0
-            # determine the number of explicitly enabled and explicitly disabled boosters
-            for i in "${explicitly_selected_boosters[@]}"
-            do
-              if [[ "$i" =~ ^-.* ]]; then #if the element starts with '-' it has been disabled
-                exclBoosters=$((exclBoosters-1))
-              else
-                inclBoosters=$((inclBoosters+1))
-              fi
-            done
-
-            # iff both there were both explicitly enabled and explicitly disabled boosters,
-            # inclBoosters * exclBoosters will be non-zero
-            # such a case isn't supported since it doesn't make sense
-            if (( $((inclBoosters * exclBoosters)) != 0 ))
-            then
-              echo -e "${RED}== Either explicitly include or explicitly exclude boosters - Mixing the two types does not make sense and it therefore not supported  ==${NC}"
+            if [ ${#explicitly_selected_boosters[@]} -ne 0 ]; then
+              echo -e "${RED}== Using '-m' and '-x' together is not supported since it doesn't make sense  ==${NC}"
               exit 1
-            else
-              selection_type=$((inclBoosters + exclBoosters))
             fi
+            IFS=',' read -r -a explicitly_selected_boosters <<< "$OPTARG"
+            selection_type=1
 
-            echo -e "${YELLOW}== Will use '${BLUE}$OPTARG${YELLOW}' booster(s) ==${NC}"
+            echo -e "${YELLOW}== Will use only the following booster(s): '${BLUE}$OPTARG${YELLOW}' ==${NC}"
+            echo
+        ;;
+        x)
+            if [ ${#explicitly_selected_boosters[@]} -ne 0 ]; then
+              echo -e "${RED}== Using '-m' and '-x' together is not supported since it doesn't make sense  ==${NC}"
+              exit 1
+            fi
+            IFS=',' read -r -a explicitly_selected_boosters <<< "$OPTARG"
+            selection_type=-1
+
+            echo -e "${YELLOW}== Will use all the booster(s) except the following: '${BLUE}$OPTARG${YELLOW}' ==${NC}"
             echo
         ;;
         \?)
@@ -1147,7 +1142,7 @@ do
         should_process=true
         if ((selection_type > 0)) && ! element_in "${booster_simple_name}" "${explicitly_selected_boosters[@]}"; then
           should_process=false
-        elif ((selection_type < 0)) && element_in "-${booster_simple_name}" "${explicitly_selected_boosters[@]}"; then
+        elif ((selection_type < 0)) && element_in "${booster_simple_name}" "${explicitly_selected_boosters[@]}"; then
           should_process=false
         fi
 
