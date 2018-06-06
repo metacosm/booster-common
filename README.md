@@ -28,14 +28,16 @@ Run `for-all-boosters.sh -h` for an overview of what the script can do and how t
   `./for-all-boosters.sh -b redhat -m cache,http change_version`    
 
   The `-b` flag ensures that only the `master` branch will be used while the `-m` flag ensures that only the `cache` and `http` boosters are used
-  The `change_version` command will simply increment the version of each booster, for example from `1.5.10-1-redhat-SNAPSHOT` to ``1.5.10-2-redhat-SNAPSHOT``
+  The `change_version` command will simply increment the version of each booster, for example from `1.5.10-1-redhat-SNAPSHOT` to `1.5.10-2-redhat-SNAPSHOT`
+  It should be noted that the new version is computed for each booster separately based on each boosters's existing version
   
 * Execute a specific parent version increment on all boosters except the specified ones
 
   `./for-all-boosters.sh -x cache,http change_version -p 24`    
 
   The `-x` flag ensures that all boosters are used except `cache` and `http` boosters.
-  The `change_version` command will set the parent version (because of the `-p` flag) of the boosters to `24` 
+  The `change_version` command will set the parent version (because of the `-p` flag) of the boosters to `24`
+  It should be noted that the new version is set to `24` no matter  what the parent version currently is
   
 * Execute an arbitrary command on all boosters without commit and pushing changes to remote
 
