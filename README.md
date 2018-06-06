@@ -19,7 +19,7 @@ Run `for-all-boosters.sh -h` for an overview of what the script can do and how t
 
 * Setup all boosters locally without actually performing any operations on them
 
-  `for-all-boosters.sh -p cmd "pwd"`
+  `./for-all-boosters.sh -p cmd "pwd"`
     
   The key flag here is `-p`, which forces the script to create a boosters locally. `cmd "pwd"` Makes the script execute the `pwd` command for each booster - effectively working as a noop
   
