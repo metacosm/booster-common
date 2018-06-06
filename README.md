@@ -25,10 +25,10 @@ Run `for-all-boosters.sh -h` for an overview of what the script can do and how t
   
 * Execute a simple version increment a on selected number of boosters for the `master` branch
 
-  `./for-all-boosters.sh -b master -m cache,http change_version`    
+  `./for-all-boosters.sh -b redhat -m cache,http change_version`    
 
   The `-b` flag ensures that only the `master` branch will be used while the `-m` flag ensures that only the `cache` and `http` boosters are used
-  The `change_version` command will simply increment the SB version, for example from `1.5.10-SNAPSHOT` to ``1.5.11-SNAPSHOT``
+  The `change_version` command will simply increment the version of each booster, for example from `1.5.10-1-redhat-SNAPSHOT` to ``1.5.10-2-redhat-SNAPSHOT``
   
 * Execute a specific parent version increment on all boosters except the specified ones
 
@@ -42,14 +42,14 @@ Run `for-all-boosters.sh -h` for an overview of what the script can do and how t
   `./for-all-boosters.sh -d cmd "cp $(pwd)/.editorconfig . && git add .editorconfig"`
   
   The `-d` flag ensures that no changes are committed locally or pushed to the remote repos.
-  The arbitrary command here adds the `.editocconfig` file (which is in the same directory as `for-all-boosters.sh`) to each booster and makes git track it   
+  The arbitrary command here adds the `.editorconfig` file (which is in the same directory as `for-all-boosters.sh`) to each booster and makes git track it   
 
 * Execute a custom script for each booster on some branch ignoring whatever changes exist locally
 
-  `./for-all-boosters.sh -f -m foo cmd "/home/scripts/adhoc.py"`
+  `./for-all-boosters.sh -f -m foo cmd -p "Made some change" "/home/scripts/adhoc.py"`
   
-  Before running the command, the script will show a warning if local changes exist (to ignore the warning add the `-n` flag)
-  Any changes that the `adhoc.py` script makes to the booster files will automatically be committed and pushed to the `foo` branch (which needs to exist)   
+  Due to the presense of the `-f` flag, before running the command the script will show a warning if local changes exist (to remove the warning add the `-n` flag)
+  Any changes that the `adhoc.py` script makes to the booster files will automatically be committed using the message specified in `-p` and pushed to the `foo` branch (which needs to exist)   
 
 * Execute one of the script's functions of a specific booster and branch
 
