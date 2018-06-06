@@ -15,6 +15,54 @@ Run `for-all-boosters.sh -h` for an overview of what the script can do and how t
 * jq
 * yq (see instructions to download [here](https://github.com/kislyuk/yq))
 
+### Examples
+
+* Setup all boosters locally without actually performing any operations on them
+
+  `for-all-boosters.sh -p cmd "pwd"`
+    
+  The key flag here is `-p`, which forces the script to create a boosters locally. `cmd "pwd"` Makes the script execute the `pwd` command for each booster - effectively working as a noop
+  
+* Execute a simple version increment a on selected number of boosters for the `master` branch
+
+  `./for-all-boosters.sh -b redhat -m cache,http change_version`    
+
+  The `-b` flag ensures that only the `redhat` branch will be used while the `-m` flag ensures that only the `cache` and `http` boosters are used
+  The `change_version` command will simply increment the version of each booster, for example from `1.5.10-1-redhat-SNAPSHOT` to `1.5.10-2-redhat-SNAPSHOT`
+  It should be noted that the new version is computed for each booster separately based on each boosters's existing version
+  
+* Execute a specific parent version increment on all boosters except the specified ones
+
+  `./for-all-boosters.sh -x cache,http change_version -p 24`    
+
+  The `-x` flag ensures that all boosters are used except `cache` and `http` boosters.
+  The `change_version` command will set the parent version (because of the `-p` flag) of the boosters to `24`
+  It should be noted that the new version is set to `24` no matter  what the parent version currently is
+  
+* Execute an arbitrary command on all boosters without commit and pushing changes to remote
+
+  `./for-all-boosters.sh -d cmd "cp $(pwd)/.editorconfig . && git add .editorconfig"`
+  
+  The `-d` flag ensures that no changes are committed locally or pushed to the remote repos.
+  The arbitrary command here adds the `.editorconfig` file (which is in the same directory as `for-all-boosters.sh`) to each booster and makes git track it   
+
+* Execute a custom script for each booster on some branch ignoring whatever changes exist locally
+
+  `./for-all-boosters.sh -f -b foo cmd -p "Made some change" "/home/scripts/adhoc.py"`
+  
+  Due to the presense of the `-f` flag, before running the command the script will show a warning if local changes exist (to remove the warning add the `-n` flag)
+  Any changes that the `adhoc.py` script makes to the booster files will automatically be committed using the message specified in `-p` and pushed to the `foo` branch (which needs to exist)   
+
+* Execute one of the script's functions of a specific booster and branch
+
+  `./for-all-boosters.sh -m redhat -b crud fn fmp_deploy`
+  
+  This command will execute the `fmp_deploy` function found in the script on the `redhat` branch of the `crud` booster
+  
+  
+
+
+
 ## `sync-descriptors.sh`
 
 A script that synchronizes YAML descriptors between booster branches. Here for historical reasons, shouldn't be needed anymore.
