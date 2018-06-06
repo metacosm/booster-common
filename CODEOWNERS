@@ -1,7 +1,7 @@
 # Each line is a file pattern followed by one or more owners.
 
 # Global owners who will be notified of incoming PRs
-@metacosm @geoand
+* @metacosm @geoand
 
 # @geoand needs to validate changes touching groovy files
 *.groovy    @geoand
