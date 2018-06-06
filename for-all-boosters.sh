@@ -838,6 +838,7 @@ show_help () {
     simple_log "This scripts executes the given command on all local boosters (identified by the 'spring-boot-*-booster' pattern) found in the current directory."
     simple_log "Usage:"
     simple_log "    -b                            A comma-separated list of branches. For example -b branch1,branch2. Defaults to $(IFS=,; echo "${default_branches[*]}"). Note that this option is mandatory to create / delete branches."
+    simple_log "    -q                            Github query string used to identify potential boosters to operate on. Defaults to $(default_github_query)."
     simple_log "    -d                            Toggle dry-run mode: no commits or pushes. This operation is not compatible with the release command"
     simple_log "    -f                            Bypass check for local changes, forcing execution if changes exist."
     simple_log "    -h                            Display this help message."
@@ -904,8 +905,11 @@ declare -a explicitly_selected_boosters=( )
 # a positive value means that only the explicitly selected boosters will be operated on
 selection_type=0
 
+readonly default_github_query="org:snowdrop+topic:booster"
+github_query=${default_github_query}
+
 # See https://sookocheff.com/post/bash/parsing-bash-script-arguments-with-shopts/
-while getopts ":hdnfspb:r:m:x:l:" opt; do
+while getopts ":hdnfspq:b:r:m:x:l:" opt; do
     case ${opt} in
         h)
             show_help
@@ -936,6 +940,11 @@ while getopts ":hdnfspb:r:m:x:l:" opt; do
         b)
             IFS=',' read -r -a branches <<< "$OPTARG"
             echo -e "${YELLOW}== Will use '${BLUE}$OPTARG${YELLOW}' branch(es) instead of the default ${BLUE}'$(IFS=,; echo "${default_branches[*]}")${YELLOW}' ==${NC}"
+            echo
+        ;;
+        q)
+            github_query="$OPTARG"
+            echo -e "${YELLOW}== Will use '${BLUE}${github_query}${YELLOW}' as the Github query that identifies potential boosters instead of the default '${default_github_query}' ==${NC}"
             echo
         ;;
         p)
@@ -1120,7 +1129,7 @@ esac
 # The following populates the array with entries like:
 # spring-boot-cache-booster,git@github.com:snowdrop/spring-boot-cache-booster.git
 # spring-boot-circuit-breaker-booster,git@github.com:snowdrop/spring-boot-circuit-breaker-booster.git
-all_boosters_from_github=($(curl -s https://api.github.com/search/repositories\?q\=org:snowdrop+topic:booster | jq -j '.items[] | .name, ",", .ssh_url, "\n"' | sort))
+all_boosters_from_github=($(curl -s https://api.github.com/search/repositories\?q\=${github_query} | jq -j '.items[] | .name, ",", .ssh_url, "\n"' | sort))
 if [ ${#all_boosters_from_github[@]} == 0 ]; then
     echo -e "${RED}No projects matching the query were found on GitHub${NC}"
     exit 1
