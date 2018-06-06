@@ -48,7 +48,7 @@ Run `for-all-boosters.sh -h` for an overview of what the script can do and how t
 
 * Execute a custom script for each booster on some branch ignoring whatever changes exist locally
 
-  `./for-all-boosters.sh -f -m foo cmd -p "Made some change" "/home/scripts/adhoc.py"`
+  `./for-all-boosters.sh -f -b foo cmd -p "Made some change" "/home/scripts/adhoc.py"`
   
   Due to the presense of the `-f` flag, before running the command the script will show a warning if local changes exist (to remove the warning add the `-n` flag)
   Any changes that the `adhoc.py` script makes to the booster files will automatically be committed using the message specified in `-p` and pushed to the `foo` branch (which needs to exist)   
