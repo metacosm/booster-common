@@ -804,6 +804,7 @@ revert_release() {
 set_maven_property() {
     local -r propertyName=${1}
     local -r propertyValue=${2}
+    local -r runVerificationBuild=${3:-false}
 
     # We are using perl to do all replacements since we need to make sure that we only replace the first occurrence in the file
     # See https://stackoverflow.com/a/6278174/2504224
@@ -835,11 +836,22 @@ set_maven_property() {
 
     # Only attempt committing if we have changes
     if [[ $(git status --porcelain) ]]; then
-        log "Property ${propertyName}${BLUE} changed to ${YELLOW}${propertyValue}"
-        commit "Update ${propertyName} version to ${propertyValue}"
-        push_to_remote
+      if [ "$runVerificationBuild" = true ] ; then
+        log "Running verification build"
+        if mvn $(maven_settings) $(maven_tests_expression) clean verify > build.log; then
+          log "Build ${YELLOW}OK"
+          rm build.log
+
+          log "Property ${propertyName}${BLUE} changed to ${YELLOW}${propertyValue}"
+          commit "Update ${propertyName} version to ${propertyValue}"
+          push_to_remote
+        else
+          log_failed "Build failed! Check ${YELLOW}build.log"
+          log "You will need to reset the branch or explicitly set the parent before running this script again."
+        fi
+      fi
     else
-        log_ignored "Property ${propertyName} was not changed"
+      log_ignored "Property ${propertyName} was not changed"
     fi
 }
 
@@ -868,7 +880,7 @@ show_help () {
     simple_log "    revert                        Revert the booster state to the last remote version."
     simple_log "    script <path to script>       Run provided script."
     simple_log "    run_smoke_tests               Run the unit tests locally."
-    simple_log "    set_maven_property <property name> <property value>           Set a Maven property. Works whether the property exists or not (even if the properties section does not exist). Commits the changes by default. "
+    simple_log "    set_maven_property <property name> <property value>           Set a Maven property. Works whether the property exists or not (even if the properties section does not exist). Commits the changes by default. Use '-v' to run a verification build after the property is updated"
     simple_log "    catalog                       Re-generate the catalog file."
     echo
 }
@@ -888,6 +900,14 @@ show_cmd_help() {
     simple_log "    -h                            Display this help message."
     simple_log "    -p <commit message>           Optional: commit the changes (if any) and pushes them to the remote repository."
 }
+
+show_set_maven_property_help() {
+    simple_log "set_maven_property <property_name> <property_value> Updates a maven property in pom.xml. The commands works whether or not the property exists"
+    simple_log "Options:"
+    simple_log "    -h                            Display this help message."
+    simple_log "    -v                            Optional: Run a verification build after setting the property"
+}
+
 
 error() {
     echo -e "${RED}Error: ${1}${NC}"
@@ -1085,9 +1105,28 @@ case "$subcommand" in
         cmd="run_smoke_tests"
     ;;
     set_maven_property)
-        shift
+        run_verification=false
+
+        # Needed in order to "reset" the options processing for the subcommand
+        OPTIND=2
+        # Process options of subcommand
+        while getopts ":hv" opt2; do
+            case ${opt2} in
+                h)
+                    show_set_maven_property_help
+                    exit 0
+                ;;
+                v)
+                    run_verification=true
+                ;;
+                \?)
+                    error "Invalid set_maven_property option: -$OPTARG" "show_set_maven_property_help" 1>&2
+                ;;
+            esac
+        done
+        shift $((OPTIND - 1))
         if [ -n "$2" ]; then
-            cmd="set_maven_property $1 $2"
+            cmd="set_maven_property $1 $2 ${run_verification}"
         else
             error "Must provide a property name and a property value"
         fi
