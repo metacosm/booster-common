@@ -832,6 +832,15 @@ set_maven_property() {
     perl -pi.bak -e "!\$x && s/${propertyName}>.*</${propertyName}>${propertyValue}</g && (\$x=1)" pom.xml
 
     rm pom.xml.bak
+
+    # Only attempt committing if we have changes
+    if [[ $(git status --porcelain) ]]; then
+        log "Property ${propertyName}${BLUE} changed to ${YELLOW}${propertyValue}"
+        commit "Update ${propertyName} version to ${propertyValue}"
+        push_to_remote
+    else
+        log_ignored "Property ${propertyName} was not changed"
+    fi
 }
 
 show_help () {
@@ -859,7 +868,7 @@ show_help () {
     simple_log "    revert                        Revert the booster state to the last remote version."
     simple_log "    script <path to script>       Run provided script."
     simple_log "    run_smoke_tests               Run the unit tests locally."
-    simple_log "    set_maven_property <property name> <property value>           Set a Maven property. Works whether the property exists or not (even if the properties section does not exist)"
+    simple_log "    set_maven_property <property name> <property value>           Set a Maven property. Works whether the property exists or not (even if the properties section does not exist). Commits the changes by default. "
     simple_log "    catalog                       Re-generate the catalog file."
     echo
 }
