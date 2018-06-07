@@ -360,11 +360,7 @@ find_openshift_templates() {
 
 replace_template_placeholders() {
   local file=${1}
-  local runtime_version=${2}
-  local booster_version=${3}
-
-  sed -i.bak -e "s/RUNTIME_VERSION/${runtime_version}/g" ${file}
-  log "${YELLOW}${file}${BLUE}: Replaced RUNTIME_VERSION token by ${runtime_version}"
+  local booster_version=${2}
 
   sed -i.bak -e "s/BOOSTER_VERSION/${booster_version}/g" ${file}
   log "${YELLOW}${file}${BLUE}: Replaced BOOSTER_VERSION token by ${booster_version}"
@@ -522,21 +518,10 @@ release() (
     if [ ${#templates[@]} != 0 ]; then
         for file in ${templates[@]}
         do
-            if [ $# -ne 0 ]; then
-              runtime=${1}
-            else
-              runtime=$(determine_highest_runtime_version_of_image_in_template ${file})
-            fi
-            if [ -z "$runtime" ]
-            then
-              log_ignored "Unable to determine runtime version"
-              return 1
-            else
-              replace_template_placeholders ${file} ${runtime} ${releaseVersion}
-            fi
+            replace_template_placeholders ${file} ${releaseVersion}
         done
         if [[ $(git status --porcelain) ]]; then
-            commit "Replaced templates placeholders: RUNTIME_VERSION -> ${runtime}, BOOSTER_VERSION -> ${releaseVersion}"
+            commit "Replaced templates placeholders: BOOSTER_VERSION -> ${releaseVersion}"
         else
             # if no changes were made it means that templates don't contain tokens and should be fixed
             log_ignored "Couldn't replace tokens in templates"
@@ -555,15 +540,12 @@ release() (
         # restore template placeholders
         for file in ${templates[@]}
         do
-            sed -i.bak -e "s/${runtime}/RUNTIME_VERSION/g" ${file}
-            log "${YELLOW}${file}${BLUE}: Restored RUNTIME_VERSION token"
-
             sed -i.bak -e "s/${releaseVersion}/BOOSTER_VERSION/g" ${file}
             log "${YELLOW}${file}${BLUE}: Restored BOOSTER_VERSION token"
 
             rm ${file}.bak
         done
-        commit "Restored templates placeholders: ${runtime} -> RUNTIME_VERSION, ${releaseVersion} -> BOOSTER_VERSION"
+        commit "Restored templates placeholders: ${releaseVersion} -> BOOSTER_VERSION"
     fi
 
     change_version ${nextVersion}
@@ -632,8 +614,7 @@ s2i_deploy() {
     templates=($(find_openshift_templates))
     for file in ${templates[@]}
     do
-        local highestImageTag=$(determine_highest_runtime_version_of_image_in_template ${file})
-        replace_template_placeholders ${file} "${highestImageTag}" 'latest'
+        replace_template_placeholders ${file} 'latest'
         oc apply -f ${file}
         oc new-app --template=$(yq -r .metadata.name ${file}) -p SOURCE_REPOSITORY_URL="https://github.com/snowdrop/${BOOSTER}" -p SOURCE_REPOSITORY_REF=${BRANCH}
         sleep 30 # needed in order to bypass the 'Pending' state
