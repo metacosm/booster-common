@@ -875,7 +875,7 @@ show_help () {
     simple_log "    run_integration_tests <deployment type>  Run the integration tests on an OpenShift cluster. Requires to be logged in to the required cluster before executing. Deployment Type can be either fmp_deploy (default) or s2i_deploy"
     simple_log "    create_branch <branch name>   Create a branch."
     simple_log "    delete_branch <branch name>   Delete a branch."
-    simple_log "    cmd <command>                 Execute the provided shell command. The following environment variables can be used by the scripts: BOOSTER, BOOSTER_DIR, BRANCH"
+    simple_log "    cmd <command>                 Execute the provided shell command. The following environment variables can be used by the scripts: BOOSTER, BOOSTER_DIR, BRANCH. Run with -h to see help."
     simple_log "    fn <function name>            Execute the specified function. This allows to call internal functions. Make sure you know what you're doing!"
     simple_log "    revert                        Revert the booster state to the last remote version."
     simple_log "    script <path to script>       Run provided script."
@@ -895,7 +895,8 @@ show_change_version_help() {
 }
 
 show_cmd_help() {
-    simple_log "cmd command executes the specified command on the project, optionally committing and pushing the changes to the remote repository"
+    simple_log "cmd command executes the specified command on the project, optionally committing and pushing the changes to the remote repository (using the -p flag)."
+    simple_log "Commands can use the BOOSTER, BOOSTER_DIR, BRANCH environment variables to get information about the currently processed booster"
     simple_log "Usage:"
     simple_log "    -h                            Display this help message."
     simple_log "    -p <commit message>           Optional: commit the changes (if any) and pushes them to the remote repository."
