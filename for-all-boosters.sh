@@ -862,6 +862,14 @@ error() {
     exit ${3:-1}
 }
 
+simple_name() {
+    if [[ ${BOOSTER} =~ spring-boot-(.*)-booster ]]; then
+        echo "${BASH_REMATCH[1]}"
+    else
+        return 1
+    fi
+}
+
 
 ### script main ###
 if [ $# -eq 0 ]; then
@@ -1135,93 +1143,90 @@ do
     IFS=',' read -r -a booster_parts <<< "${booster_line}"
     export BOOSTER=${booster_parts[0]}
     BOOSTER_GIT_URL=${booster_parts[1]}
-    if [[ ${BOOSTER} =~ spring-boot-(.*)-booster ]]; then #this will always be true, but is used in order to capture the simple name
-        booster_simple_name=${BASH_REMATCH[1]}
+    booster_simple_name=$(simple_name)
+    # We process the boosters when one of the following conditions is true
+    # 1) the user made no explicit booster selections (therefore all boosters are processed)
+    # 2) the user explicitly included the booster using it's simple name (the part without 'spring-boot-' and '-booster')
+    # 3) the user did not include the simple booster name in the explicitly excluded boosters
+    should_process=true
+    if ((selection_type > 0)) && ! element_in "${booster_simple_name}" "${explicitly_selected_boosters[@]}"; then
+      should_process=false
+    elif ((selection_type < 0)) && element_in "${booster_simple_name}" "${explicitly_selected_boosters[@]}"; then
+      should_process=false
+    fi
 
-        # We process the boosters when one of the following conditions is true
-        # 1) the user made no explicit booster selections (therefore all boosters are processed)
-        # 2) the user explicitly included the booster using it's simple name (the part without 'spring-boot-' and '-booster')
-        # 3) the user did not include the simple booster name in the explicitly excluded boosters
-        should_process=true
-        if ((selection_type > 0)) && ! element_in "${booster_simple_name}" "${explicitly_selected_boosters[@]}"; then
-          should_process=false
-        elif ((selection_type < 0)) && element_in "${booster_simple_name}" "${explicitly_selected_boosters[@]}"; then
-          should_process=false
-        fi
+    if [ "$should_process" = true ] ; then
+      echo -e "${BLUE}> ${YELLOW}${BOOSTER}${BLUE}${NC}"
 
-        if [ "$should_process" = true ] ; then
-          echo -e "${BLUE}> ${YELLOW}${BOOSTER}${BLUE}${NC}"
+      if [[ "$PERFORM_BOOSTER_LOCAL_SETUP" == on ]]; then
+        setup_booster_locally ${BOOSTER} ${BOOSTER_GIT_URL}
+      fi
 
-          if [[ "$PERFORM_BOOSTER_LOCAL_SETUP" == on ]]; then
-            setup_booster_locally ${BOOSTER} ${BOOSTER_GIT_URL}
-          fi
+      pushd ${BOOSTER} > /dev/null
 
-          pushd ${BOOSTER} > /dev/null
-
-          if [ ! -d .git ]; then
-              msg="Not under git control"
-              echo -e "${MAGENTA}${msg}${MAGENTA}. Ignoring.${NC}"
-              ignoredItem="${BOOSTER}:\"${msg}\""
-              ignored+=( "${ignoredItem}" )
-          else
-              for BRANCH in "${branches[@]}"
-              do
-                  export BRANCH
-                  bypassUpdate='off'
-                  # check if branch exists, otherwise skip booster
-                  if [ "$CREATE_BRANCH" != on ] && ! git show-ref --verify --quiet refs/heads/${BRANCH}; then
-                      # check if a remote but not locally present branch exist and check it out if it does
-                      if git ls-remote --heads "${remote}" "${BRANCH}" | grep "${BRANCH}" > /dev/null; then
-                          git checkout -b "${BRANCH}" "${remote}"/"${BRANCH}"
-                          bypassUpdate='on'
-                      else
-                          log_ignored "Branch does not exist"
-                          continue
-                      fi
-                  fi
-
-                  if [ "$bypassUpdate" == off ]; then
-                      git fetch -q "${remote}" > /dev/null
-
-                      if [ "$IGNORE_LOCAL_CHANGES" != on ]; then
-                          # if booster has uncommitted changes, skip it
-                          if [[ $(git status --porcelain) ]]; then
-                              log_ignored "You have uncommitted changes, please stash these changes"
-                              continue
-                          fi
-
-                          git checkout -q "${BRANCH}" > /dev/null && git rebase "${remote}"/"${BRANCH}" > /dev/null
-                      else
-                          git checkout -q "${BRANCH}" > /dev/null
-                      fi
-                  fi
-
-
-                  # if we need to replace a multi-line match in the pom file of each booster, for example:
-                  # perl -pi -e 'undef $/; s/<properties>\s*<\/properties>/replacement/' pom.xml
-
-                  # if we need to execute sed on the result of find:
-                  # find . -name "application.yaml" -exec sed -i '' -e "s/provider: fabric8/provider: snowdrop/g" {} +
-
-                  log "Executing '${YELLOW}${cmd}${BLUE}'"
-                  # let the command fail without impacting the main loop, let the command decide on what to log / fail / ignore
-                  if ! ${cmd}; then
-                      log "Done"
-                      echo
+      if [ ! -d .git ]; then
+          msg="Not under git control"
+          echo -e "${MAGENTA}${msg}${MAGENTA}. Ignoring.${NC}"
+          ignoredItem="${BOOSTER}:\"${msg}\""
+          ignored+=( "${ignoredItem}" )
+      else
+          for BRANCH in "${branches[@]}"
+          do
+              export BRANCH
+              bypassUpdate='off'
+              # check if branch exists, otherwise skip booster
+              if [ "$CREATE_BRANCH" != on ] && ! git show-ref --verify --quiet refs/heads/${BRANCH}; then
+                  # check if a remote but not locally present branch exist and check it out if it does
+                  if git ls-remote --heads "${remote}" "${BRANCH}" | grep "${BRANCH}" > /dev/null; then
+                      git checkout -b "${BRANCH}" "${remote}"/"${BRANCH}"
+                      bypassUpdate='on'
+                  else
+                      log_ignored "Branch does not exist"
                       continue
                   fi
+              fi
 
+              if [ "$bypassUpdate" == off ]; then
+                  git fetch -q "${remote}" > /dev/null
+
+                  if [ "$IGNORE_LOCAL_CHANGES" != on ]; then
+                      # if booster has uncommitted changes, skip it
+                      if [[ $(git status --porcelain) ]]; then
+                          log_ignored "You have uncommitted changes, please stash these changes"
+                          continue
+                      fi
+
+                      git checkout -q "${BRANCH}" > /dev/null && git rebase "${remote}"/"${BRANCH}" > /dev/null
+                  else
+                      git checkout -q "${BRANCH}" > /dev/null
+                  fi
+              fi
+
+
+              # if we need to replace a multi-line match in the pom file of each booster, for example:
+              # perl -pi -e 'undef $/; s/<properties>\s*<\/properties>/replacement/' pom.xml
+
+              # if we need to execute sed on the result of find:
+              # find . -name "application.yaml" -exec sed -i '' -e "s/provider: fabric8/provider: snowdrop/g" {} +
+
+              log "Executing '${YELLOW}${cmd}${BLUE}'"
+              # let the command fail without impacting the main loop, let the command decide on what to log / fail / ignore
+              if ! ${cmd}; then
                   log "Done"
-                  processedItem="${BRANCH}:${BOOSTER}"
-                  processed+=( "${processedItem}" )
                   echo
-              done
-          fi
+                  continue
+              fi
 
-          echo -e "----------------------------------------------------------------------------------------\n"
-          popd > /dev/null
+              log "Done"
+              processedItem="${BRANCH}:${BOOSTER}"
+              processed+=( "${processedItem}" )
+              echo
+          done
+      fi
 
-        fi
+      echo -e "----------------------------------------------------------------------------------------\n"
+      popd > /dev/null
+
     fi
 done
 
