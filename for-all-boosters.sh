@@ -397,6 +397,46 @@ determine_highest_runtime_version_of_image_in_template() {
 }
 
 
+# WARNING This method aside from replacing the RUNTIME_VERSION value, also normalizes the YAML
+# Unfortunately we can't control that due the implicit yaml to json to yaml conversions
+replace_template_runtime_version() {
+  local -r file=${1}
+  local -r version=${2}
+
+  local -r newParams=$(yq '.parameters |  map(if .name == "RUNTIME_VERSION" then . + {"value": "'"${version}"'"} else . end)' ${file})
+  yq -y '.parameters='"${newParams}" ${file} > ${file}.new
+  rm ${file}
+  mv ${file}.new ${file}
+}
+
+# Meant to be called using 'fn replace_template_runtime_version_of_booster 1.3-9'
+replace_template_runtime_version_of_booster() {
+    local -r newVersion=${1}
+    if [ -z "$newVersion" ]
+    then
+      log_ignored "A version number must be supplied"
+      return 1
+    fi
+
+    # replace template placeholders if they exist
+    templates=($(find_openshift_templates))
+    if [ ${#templates[@]} != 0 ]; then
+        for file in ${templates[@]}
+        do
+            replace_template_runtime_version ${file} ${newVersion}
+        done
+        if [[ $(git status --porcelain) ]]; then
+            commit "Update template's RUNTIME_VERSION -> ${newVersion}"
+            push_to_remote
+        else
+            # if no changes were made it means that templates don't contain tokens and should be fixed
+            log_ignored "Couldn't replace tokens in templates"
+            return 1
+        fi
+    fi
+}
+
+
 # Based on https://stackoverflow.com/a/4025065
 # Returns 0 if both versions are equal, 1 if the first argument is greater, 2 if the second argument is greater
 version_compare() {
