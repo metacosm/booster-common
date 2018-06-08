@@ -1131,6 +1131,7 @@ case "$subcommand" in
     ;;
     catalog)
         cmd="catalog"
+        postCmd="open_catalog_pr"
     ;;
     create_branch)
         CREATE_BRANCH='on'
@@ -1175,7 +1176,7 @@ case "$subcommand" in
         if [ -n "$1" ]; then
             cmd="source $1"
         else
-            error "Must provide a script to execute"
+            error "Must provide a script to execute" 1>&2
         fi
     ;;
     revert)
@@ -1213,7 +1214,7 @@ case "$subcommand" in
         if [ -n "$2" ]; then
             cmd="set_maven_property $1 $2 ${run_verification}"
         else
-            error "Must provide a property name and a property value"
+            error "Must provide a property name and a property value" 1>&2
         fi
     ;;
     cmd)
@@ -1241,7 +1242,7 @@ case "$subcommand" in
         if [ -n "$1" ]; then
             cmd="run_cmd $1 ---- ${message}"
         else
-            error "Must provide a command to execute"
+            error "Must provide a command to execute" 1>&2
         fi
     ;;
     fn)
@@ -1251,7 +1252,7 @@ case "$subcommand" in
             shift # remove command name from args
             cmd="${cmd} $@" # append args
         else
-            error "Must provide a function to execute"
+            error "Must provide a function to execute" 1>&2
         fi
     ;;
     *)
