@@ -460,12 +460,10 @@ version_compare() {
         fi
         if ((10#${ver1[i]} > 10#${ver2[i]}))
         then
-            log "$1 > $2"
             return 1
         fi
         if ((10#${ver1[i]} < 10#${ver2[i]}))
         then
-            log "$1 < $2"
             return 2
         fi
     done
@@ -496,9 +494,9 @@ release() (
             local error=0
             # first check SB version
             local -r tagSBVersion=${BASH_REMATCH[1]}
-            local comparison=$(version_compare ${tagSBVersion} ${sbVersion})
 
-            case ${comparison} in
+            version_compare ${tagSBVersion} ${sbVersion}
+            case $? in
                 1)
                     error=1
                 ;;
