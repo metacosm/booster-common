@@ -757,19 +757,32 @@ run_smoke_tests() {
 
 prepare_catalog() {
     # clone launcher-catalog in temp dir if it doesn't already exist
-#    local -r catalogDir="${WORK_DIR}/launcher-booster-catalog"
-    local -r catalogDir="/tmp/launcher-booster-catalog" # todo: replace by line above
+    local -r catalogDir="${WORK_DIR}/launcher-booster-catalog"
     if [[ ! -d  ${catalogDir} ]]; then
-        if ! git clone git@github.com:fabric8-launcher/launcher-booster-catalog.git ${catalogDir}; then
+        log "Preparing launcher-booster-catalog temporary clone" 1>&2
+        if ! git clone git@github.com:snowdrop/launcher-booster-catalog.git ${catalogDir} 1>&2 2> /dev/null; then
             simple_log "Could not check out launcher-booster-catalog"
             return 1
         fi
+        # make sure that our copy is up-to-date with upstream version and create a branch
+        pushd ${catalogDir} > /dev/null
+        git remote add upstream git@github.com:fabric8-launcher/launcher-booster-catalog.git 1>&2 2> /dev/null
+        git pull --rebase upstream master 1>&2 > /dev/null 2> /dev/null
+        git push origin master 1>&2 > /dev/null 2> /dev/null
+        popd > /dev/null
     fi
 
     echo ${catalogDir}
 }
 
+get_sb_version_file() {
+    echo "${WORK_DIR}/spring-version.txt"
+}
+
 catalog() {
+    declare -Ar catalog_branch_mapping=( ["master"]="current-community" ["redhat"]="current-redhat" ["osio"]="current-osio" )
+    declare -Ar catalog_booster_mapping=( ["http"]="rest-http" ["http-secured"]="rest-http-secured" )
+
     local -r simpleName=$(simple_name)
     # get the catalog project
     local -r catalogDir=$(prepare_catalog)
@@ -791,23 +804,31 @@ catalog() {
     fi
 
     local -r boosterYAML=${catalogDir}"/spring-boot/"${catalogVersion}"/"${catalogMission}"/booster.yaml"
-    if [ ! -f ${boosterYAML} ]; then
+    if [[ ! -f ${boosterYAML} ]]; then
         log_failed "Couldn't find ${boosterYAML}"
         return 1
     fi
 
     local -r newVersion=$(get_latest_tag "${BOOSTERS_DIR}/${BOOSTER}")
 
+    # record new SB version
+    local -r newSBVersion=$(parse_version ${newVersion} sb)
+    local -r sbVersionFile=$(get_sb_version_file)
+    if [[ ! -f ${sbVersionFile} ]]; then
+        log "Recording new Spring Boot version ${YELLOW}${newSBVersion}${BLUE}"
+        echo "${newSBVersion}" > "${sbVersionFile}"
+    fi
+
     # update metadata.yaml if we haven't already done it
     local -r metadataYAML=${catalogDir}"/metadata.yaml"
     if [[ ! $(git -C ${catalogDir} status --porcelain ${metadataYAML}) ]]; then
         local oldVersion=$(yq -r .source.git.ref ${boosterYAML})
         local -r oldSBVersion=$(parse_version ${oldVersion} sb)
-        local -r newSBVersion=$(parse_version ${newVersion} sb)
 
         version_compare ${newSBVersion} ${oldSBVersion}
         if (( $? == 1 )); then
-            local -r newSBVersions=$(yq '.runtimes[] | select(.id == "spring-boot") | .versions[] | .name="'"${newSBVersion}"'.RELEASE"' ${metadataYAML} | jq '.' --slurp -c)
+            # todo: need to replace TODO by the appropriate version name below… :(
+            local -r newSBVersions=$(yq '.runtimes[] | select(.id == "spring-boot") | .versions[] | .name="'"${newSBVersion}"'.RELEASE ('"TODO"')"' ${metadataYAML} | jq '.' --slurp -c)
             local -r newRuntimes=$(yq '.runtimes | map(if .id == "spring-boot" then .versions = '"${newSBVersions}"' else . end)' ${metadataYAML})
             yq -y '.runtimes='"${newRuntimes}" ${metadataYAML} > ${metadataYAML}.new
             rm ${metadataYAML}
@@ -819,6 +840,18 @@ catalog() {
     yq -y '.source.git.ref="'"${newVersion}"'"' ${boosterYAML} > ${boosterYAML}.new
     rm ${boosterYAML}
     mv ${boosterYAML}.new ${boosterYAML}
+}
+
+open_catalog_pr() {
+    local -r catalogDir=$(prepare_catalog)
+    pushd ${catalogDir} > /dev/null
+    local -r sbVersion=$(cat "$(get_sb_version_file)")
+    git checkout -b "update-to-${sbVersion}" > /dev/null 2> /dev/null
+    commit "Update Spring Boot to ${sbVersion}"
+    # todo: push the branch to snowdrop instead of fabric8-launcher
+    local -r pr=$(hub pull-request -p -b fabric8-launcher:master -m "DO NOT MERGE: Update Spring Boot to ${sbVersion}")
+    simple_log "Created PR: ${YELLOW}${pr}"
+    popd > /dev/null
 }
 
 trim() {
@@ -1011,9 +1044,6 @@ simple_name() {
 if [ $# -eq 0 ]; then
     show_help
 fi
-
-declare -Ar catalog_branch_mapping=(["master"]="current-community" ["redhat"]="current-redhat" ["osio"]="current-osio")
-declare -Ar catalog_booster_mapping=(["http"]="rest-http" ["http-secured"]="rest-http-secured")
 
 readonly default_branches=("master" "redhat")
 branches=("${default_branches[@]}")
