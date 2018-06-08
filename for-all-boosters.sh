@@ -436,6 +436,9 @@ replace_template_runtime_version_of_booster() {
     fi
 }
 
+# based on https://stackoverflow.com/a/10583562 for the components result.
+# Note that to retrieve the components, the variable must be named 'components' on the calling site and needs to be 'eval'ed:
+# local components; components=eval $(parse_version 1.5.13-2-SNAPSHOT)
 parse_version() {
     local -r currentVersion=${1}
     local -r extract=${2:-components}
@@ -448,16 +451,16 @@ parse_version() {
         local -r snapshot=${BASH_REMATCH[4]}
         case "$extract" in
             sb)
-                declare -p sbVersion
+                echo ${sbVersion}
             ;;
             own)
-                declare -p versionInt
+                echo ${versionInt}
             ;;
             qualifier)
-                declare -p qualifier
+                echo ${qualifier}
             ;;
             snapshot)
-                declare -p snapshot
+                echo ${snapshot}
             ;;
             components)
                 local -r components=( "${sbVersion}" "${versionInt}" "${qualifier}" "${snapshot}" )
