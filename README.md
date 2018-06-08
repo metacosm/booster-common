@@ -53,18 +53,12 @@ Run `for-all-boosters.sh -h` for an overview of what the script can do and how t
   Due to the presense of the `-f` flag, before running the command the script will show a warning if local changes exist (to remove the warning add the `-n` flag)
   Any changes that the `adhoc.py` script makes to the booster files will automatically be committed using the message specified in `-p` and pushed to the `foo` branch (which needs to exist)   
 
-* Execute one of the script's functions of a specific booster and branch
+* This command will execute the `fmp_deploy` function found in the script on the `redhat` branch of the `crud` booster
 
   `./for-all-boosters.sh -m redhat -b crud fn fmp_deploy`
-  
-  This command will execute the `fmp_deploy` function found in the script on the `redhat` branch of the `crud` booster
   
  * Add the maven wrapper to all boosters
 
-  `./for-all-boosters.sh -m redhat -b crud fn fmp_deploy`
-  
- * This command will execute the `fmp_deploy` function found in the script on the `redhat` branch of the `crud` booster
-  
   `./for-all-boosters.sh -np cmd -p "SB-204: Add Maven Wrapper"  "mvn -N io.takari:maven:wrapper -Dmaven=3.3.9 && git add .mvn mvnw mvnw.cmd"`
 
 
