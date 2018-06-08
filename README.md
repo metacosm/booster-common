@@ -8,6 +8,7 @@ Run `for-all-boosters.sh -h` for an overview of what the script can do and how t
 
 ### Dependencies
 
+* bash 4.3 (to be able to use associative arrays). On macOS, `brew install bash` and make sure that `/usr/local/bin` is before `/bin` in your path.
 * git
 * perl
 * mvn
@@ -60,7 +61,6 @@ Run `for-all-boosters.sh -h` for an overview of what the script can do and how t
  * Add the maven wrapper to all boosters
 
   `./for-all-boosters.sh -np cmd -p "SB-204: Add Maven Wrapper"  "mvn -N io.takari:maven:wrapper -Dmaven=3.3.9 && git add .mvn mvnw mvnw.cmd"`
-
 
 
 ## `sync-descriptors.sh`
