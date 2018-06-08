@@ -436,6 +436,42 @@ replace_template_runtime_version_of_booster() {
     fi
 }
 
+parse_version() {
+    local -r currentVersion=${1}
+    local -r extract=${2:-components}
+
+    local -r versionRE='([1-9].[0-9].[0-9]+)-([0-9]+)-?([a-zA-Z0-9]+)?-?(SNAPSHOT)?'
+    if [[ "${currentVersion}" =~ ${versionRE} ]]; then
+        local -r sbVersion=${BASH_REMATCH[1]}
+        local -r versionInt=${BASH_REMATCH[2]}
+        local -r qualifier=${BASH_REMATCH[3]}
+        local -r snapshot=${BASH_REMATCH[4]}
+        case "$extract" in
+            sb)
+                declare -p sbVersion
+            ;;
+            own)
+                declare -p versionInt
+            ;;
+            qualifier)
+                declare -p qualifier
+            ;;
+            snapshot)
+                declare -p snapshot
+            ;;
+            components)
+                local -r components=( "${sbVersion}" "${versionInt}" "${qualifier}" "${snapshot}" )
+                declare -p components
+            ;;
+            *)
+                simple_log "Unknown extraction component: '${extract}'" 1>&2
+                return 1
+            ;;
+        esac
+    else
+        return 1
+    fi
+}
 
 # Based on https://stackoverflow.com/a/4025065
 # Returns 0 if both versions are equal, 1 if the first argument is greater, 2 if the second argument is greater
