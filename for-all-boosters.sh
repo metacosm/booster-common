@@ -1251,6 +1251,7 @@ case "$subcommand" in
             cmd="$1" # record command name
             shift # remove command name from args
             cmd="${cmd} $@" # append args
+            cmd=$(trim ${cmd})
         else
             error "Must provide a function to execute" 1>&2
         fi
