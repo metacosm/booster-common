@@ -1120,6 +1120,7 @@ shift $((OPTIND - 1))
 
 subcommand=$1
 cmd=""
+declare postCmd
 case "$subcommand" in
     release)
         if [[ "$COMMIT" == off ]]; then
@@ -1359,6 +1360,15 @@ do
 
     fi
 done
+
+if [ -n "${postCmd}" ]; then
+    simple_log "Executing post-boosters processing command '${YELLOW}${postCmd}${BLUE}'"
+    if ! ${postCmd}; then
+        simple_log "Couldn't run ${YELLOW}${postCmd}"
+        echo
+    fi
+fi
+
 
 popd > /dev/null
 
