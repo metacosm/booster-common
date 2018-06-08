@@ -807,8 +807,9 @@ catalog() {
 
         version_compare ${newSBVersion} ${oldSBVersion}
         if (( $? == 1 )); then
-            local -r newVersions=$(yq '.runtimes[] | select(.id == "spring-boot") | .versions[] | .name="'"${newSBVersion}"'.RELEASE"' ${metadataYAML} | jq '.' --slurp)
-            yq -y '.runtimes[] | select(.id == "spring-boot") | .versions='"${newVersions}" ${metadataYAML} > ${metadataYAML}.new
+            local -r newSBVersions=$(yq '.runtimes[] | select(.id == "spring-boot") | .versions[] | .name="'"${newSBVersion}"'.RELEASE"' ${metadataYAML} | jq '.' --slurp -c)
+            local -r newRuntimes=$(yq '.runtimes | map(if .id == "spring-boot" then .versions = '"${newSBVersions}"' else . end)' ${metadataYAML})
+            yq -y '.runtimes='"${newRuntimes}" ${metadataYAML} > ${metadataYAML}.new
             rm ${metadataYAML}
             mv ${metadataYAML}.new ${metadataYAML}
         fi
