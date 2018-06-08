@@ -755,9 +755,69 @@ run_smoke_tests() {
     fi
 }
 
+prepare_catalog() {
+    # clone launcher-catalog in temp dir if it doesn't already exist
+#    local -r catalogDir="${WORK_DIR}/launcher-booster-catalog"
+    local -r catalogDir="/tmp/launcher-booster-catalog" # todo: replace by line above
+    if [[ ! -d  ${catalogDir} ]]; then
+        if ! git clone git@github.com:fabric8-launcher/launcher-booster-catalog.git ${catalogDir}; then
+            simple_log "Could not check out launcher-booster-catalog"
+            return 1
+        fi
+    fi
+
+    echo ${catalogDir}
+}
+
 catalog() {
-    # todo: update launcher catalog instead
-    echo "${BOOSTER}: ${BRANCH} => $(get_latest_tag)" >>"$CATALOG_FILE"
+    local -r simpleName=$(simple_name)
+    # get the catalog project
+    local -r catalogDir=$(prepare_catalog)
+    if [ $? -ne 0 ]; then
+        log_failed "Unable to retrieve launcher-booster-catalog"
+        return 1
+    fi
+
+    # get the YAML file for the booster / branch combination
+    local -r catalogVersion=${catalog_branch_mapping[${BRANCH}]}
+    if [[ ! -n ${catalogVersion} ]]; then
+        log_ignored "No mapping exist for branch ${YELLOW}${BRANCH}"
+        return 1
+    fi
+    local catalogMission=${catalog_booster_mapping[${simpleName}]}
+    if [[ ! -n ${catalogMission} ]]; then
+        # if we don't have a booster mapping, use the booster simple name
+        catalogMission=${simpleName}
+    fi
+
+    local -r boosterYAML=${catalogDir}"/spring-boot/"${catalogVersion}"/"${catalogMission}"/booster.yaml"
+    if [ ! -f ${boosterYAML} ]; then
+        log_failed "Couldn't find ${boosterYAML}"
+        return 1
+    fi
+
+    local -r newVersion=$(get_latest_tag "${BOOSTERS_DIR}/${BOOSTER}")
+
+    # update metadata.yaml if we haven't already done it
+    local -r metadataYAML=${catalogDir}"/metadata.yaml"
+    if [[ ! $(git -C ${catalogDir} status --porcelain ${metadataYAML}) ]]; then
+        local oldVersion=$(yq -r .source.git.ref ${boosterYAML})
+        local -r oldSBVersion=$(parse_version ${oldVersion} sb)
+        local -r newSBVersion=$(parse_version ${newVersion} sb)
+
+        version_compare ${newSBVersion} ${oldSBVersion}
+        if (( $? == 1 )); then
+            local -r newVersions=$(yq '.runtimes[] | select(.id == "spring-boot") | .versions[] | .name="'"${newSBVersion}"'.RELEASE"' ${metadataYAML} | jq '.' --slurp)
+            yq -y '.runtimes[] | select(.id == "spring-boot") | .versions='"${newVersions}" ${metadataYAML} > ${metadataYAML}.new
+            rm ${metadataYAML}
+            mv ${metadataYAML}.new ${metadataYAML}
+        fi
+    fi
+
+
+    yq -y '.source.git.ref="'"${newVersion}"'"' ${boosterYAML} > ${boosterYAML}.new
+    rm ${boosterYAML}
+    mv ${boosterYAML}.new ${boosterYAML}
 }
 
 trim() {
@@ -900,8 +960,8 @@ show_help () {
     simple_log "    revert                        Revert the booster state to the last remote version."
     simple_log "    script <path to script>       Run provided script."
     simple_log "    run_smoke_tests               Run the unit tests locally."
-    simple_log "    set_maven_property <property name> <property value>           Set a Maven property. Works whether the property exists or not (even if the properties section does not exist). Commits the changes by default. Use '-v' to run a verification build after the property is updated"
-    simple_log "    catalog                       Re-generate the catalog file."
+    simple_log "    set_maven_property <property name> <property value>           Set a Maven property. Works whether the property exists or not (even if the properties section does not exist). Commits the changes by default. Use '-v' to run a verification build after the property is updated."
+    simple_log "    catalog                       Creates a pull-request to update the launcher-booster-catalog project with the latest booster versions."
     echo
 }
 
@@ -950,6 +1010,9 @@ simple_name() {
 if [ $# -eq 0 ]; then
     show_help
 fi
+
+declare -Ar catalog_branch_mapping=(["master"]="current-community" ["redhat"]="current-redhat" ["osio"]="current-osio")
+declare -Ar catalog_booster_mapping=(["http"]="rest-http" ["http-secured"]="rest-http-secured")
 
 readonly default_branches=("master" "redhat")
 branches=("${default_branches[@]}")
@@ -1062,18 +1125,9 @@ case "$subcommand" in
             log_failed "The dry-run option is not supported for the release command"
             exit 1
         fi
-
-        CATALOG_FILE=${BOOSTERS_DIR}"/booster-catalog-versions.txt"
-        rm -f "$CATALOG_FILE"
-        touch "$CATALOG_FILE"
-
         cmd="release"
     ;;
     catalog)
-        CATALOG_FILE=${BOOSTERS_DIR}"/booster-catalog-versions.txt"
-        rm -f "$CATALOG_FILE"
-        touch "$CATALOG_FILE"
-        simple_log "Re-generating catalog file ${YELLOW}${CATALOG_FILE}${NC}"
         cmd="catalog"
     ;;
     create_branch)
