@@ -509,7 +509,7 @@ version_compare() {
     return 0
 }
 
-release() (
+release() {
     verify_maven_project_setup
 
     local -r currentVersion=$(evaluate_mvn_expr 'project.version')
@@ -631,10 +631,8 @@ release() (
     PUSH='on'
     push_to_remote "${remote}" "--tags"
 
-    # todo: update launcher catalog instead
-    log "Appending new version ${YELLOW}${releaseVersion}${BLUE} to ${YELLOW}${CATALOG_FILE}"
-    echo "${BOOSTER}: ${BRANCH} => ${releaseVersion}" >> "$CATALOG_FILE"
-)
+
+}
 
 do_revert() {
   local -r silence=${1:-false}
