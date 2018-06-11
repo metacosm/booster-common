@@ -695,7 +695,7 @@ s2i_deploy() {
         oc apply -f ${file}
         oc new-app --template=$(yq -r .metadata.name ${file}) -p SOURCE_REPOSITORY_URL="https://github.com/snowdrop/${BOOSTER}" -p SOURCE_REPOSITORY_REF=${BRANCH}
         sleep 30 # needed in order to bypass the 'Pending' state
-        timeout 300s bash -c 'while [[ $(oc get pod -o json | jq  ".items[] | select(.metadata.name | contains(\"build\"))  | .status  " | jq -rs "sort_by(.startTme) | last | .phase") -eq "Running" ]]; do sleep 20; done; echo ""'
+        timeout 300s bash -c 'while [[ $(oc get pod -o json | jq  ".items[] | select(.metadata.name | contains(\"build\"))  | .status  " | jq -rs "sort_by(.startTme) | last | .phase") == "Running" ]]; do sleep 20; done; echo ""'
     done
 }
 
