@@ -805,7 +805,7 @@ catalog() {
         catalogMission=${simpleName}
     fi
 
-    local -r boosterYAML=${catalogDir}"/spring-boot/"${catalogVersion}"/"${catalogMission}"/booster.yaml"
+    local -r boosterYAML="${catalogDir}/spring-boot/${catalogVersion}/${catalogMission}/booster.yaml"
     if [[ ! -f ${boosterYAML} ]]; then
         log_failed "Couldn't find ${boosterYAML}"
         return 1
