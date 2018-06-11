@@ -827,8 +827,7 @@ catalog() {
 
         version_compare ${newSBVersion} ${oldSBVersion}
         if (( $? == 1 )); then
-            # todo: need to replace TODO by the appropriate version name below… :(
-            local -r newSBVersions=$(yq '.runtimes[] | select(.id == "spring-boot") | .versions[] | .name="'"${newSBVersion}"'.RELEASE ('"TODO"')"' ${metadataYAML} | jq '.' --slurp -c)
+            local -r newSBVersions=$(yq '.runtimes[] | select(.id == "spring-boot") | .versions | map(if .id == "current-community" then .name="'"${newSBVersion}"'.RELEASE (Community)" elif .id == "current-redhat" then .name="'"${newSBVersion}"'.RELEASE (RHOAR)" elif .id == "current-osio" then .name="'"${newSBVersion}"'.RELEASE (OSIO)" else . end)' ${metadataYAML})
             local -r newRuntimes=$(yq '.runtimes | map(if .id == "spring-boot" then .versions = '"${newSBVersions}"' else . end)' ${metadataYAML})
             yq -y '.runtimes='"${newRuntimes}" ${metadataYAML} > ${metadataYAML}.new
             rm ${metadataYAML}
