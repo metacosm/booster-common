@@ -845,10 +845,10 @@ open_catalog_pr() {
     local -r catalogDir=$(prepare_catalog)
     pushd ${catalogDir} > /dev/null
     local -r sbVersion=$(cat "$(get_sb_version_file)")
-    git checkout -b "update-to-${sbVersion}" > /dev/null 2> /dev/null
+    local -r branchName="update-to-${sbVersion}"
+    git checkout -b "${branchName}" > /dev/null 2> /dev/null
     commit "Update Spring Boot to ${sbVersion}"
-    # todo: push the branch to snowdrop instead of fabric8-launcher
-    local -r pr=$(hub pull-request -p -b fabric8-launcher:master -m "DO NOT MERGE: Update Spring Boot to ${sbVersion}")
+    local -r pr=$(hub pull-request -p -h snowdrop:"${branchName}" -b fabric8-launcher:master -m "DO NOT MERGE: Update Spring Boot to ${sbVersion}")
     simple_log "Created PR: ${YELLOW}${pr}"
     popd > /dev/null
 }
