@@ -939,9 +939,11 @@ set_maven_property() {
 
     fi
 
+    local wasAdded=0
     if ! grep --quiet "<${1}>" pom.xml; then
       # add the property as the last property in the properties section with a dummy value
       perl -pi.bak -e "!\$x && s/<\/properties>/  <${propertyName}>replaceme<\/${propertyName}>\n  <\/properties>/g && (\$x=1)" pom.xml
+      wasAdded=1
     fi
 
     # replace the actual property
@@ -957,8 +959,14 @@ set_maven_property() {
           log "Build ${YELLOW}OK"
           rm build.log
 
-          log "Property ${propertyName}${BLUE} changed to ${YELLOW}${propertyValue}"
-          commit "Update ${propertyName} version to ${propertyValue}"
+          local addedOrSetLog="changed"
+          local addedOrSetCommit="Update"
+          if (( wasAdded == 1 )); then
+            addedOrSetLog="added and set"
+            addedOrSetCommit="Add"
+          fi
+          log "Property ${propertyName}${BLUE} ${addedOrSetLog} to ${YELLOW}${propertyValue}"
+          commit "${addedOrSetCommit} ${propertyName} version with ${propertyValue} value"
           push_to_remote
         else
           log_failed "Build failed! Check ${YELLOW}build.log"
