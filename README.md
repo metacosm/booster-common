@@ -6,6 +6,11 @@ A script that operates on all boosters under the `snowdrop` organization that ha
 
 Run `for-all-boosters.sh -h` for an overview of what the script can do and how to use it.
 
+Note that some commands can have the opportunity to run a command *after* all the boosters are processed. This is accomplished 
+using the `postCmd` variable when command line arguments are parsed. An example of this is the `catalog` command which calls 
+`postCmd="open_catalog_pr"` when the command is initialized. This results in the `open_catalog_pr` function being called *once*
+when all the boosters are processed. 
+
 ### Dependencies
 
 * bash 4.3 (to be able to use associative arrays). On macOS, `brew install bash` and make sure that `/usr/local/bin` is before `/bin` in your path.
@@ -58,9 +63,14 @@ Run `for-all-boosters.sh -h` for an overview of what the script can do and how t
 
   `./for-all-boosters.sh -m redhat -b crud fn fmp_deploy`
   
- * Add the maven wrapper to all boosters
+* Add the maven wrapper to all boosters
 
   `./for-all-boosters.sh -np cmd -p "SB-204: Add Maven Wrapper"  "mvn -N io.takari:maven:wrapper -Dmaven=3.3.9 && git add .mvn mvnw mvnw.cmd"`
+  
+* Update the `launcher-booster-catalog` automatically based on the most recently tagged version of the boosters. Note that this 
+  should only be called when the Spring Boot version has been updated, not for simple booster version updates.
+  
+  `./for-all-boosters.sh catalog`
 
 
 ## `sync-descriptors.sh`
