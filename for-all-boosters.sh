@@ -759,7 +759,7 @@ prepare_catalog() {
     # clone launcher-catalog in temp dir if it doesn't already exist
     local -r catalogDir="${WORK_DIR}/launcher-booster-catalog"
     if [[ ! -d  ${catalogDir} ]]; then
-        log "Preparing launcher-booster-catalog temporary clone" 1>&2
+        log "Preparing launcher-booster-catalog temporary clone. Only done once." 1>&2
         if ! git clone git@github.com:snowdrop/launcher-booster-catalog.git ${catalogDir} 1>&2 2> /dev/null; then
             simple_log "Could not check out launcher-booster-catalog"
             return 1
@@ -815,7 +815,7 @@ catalog() {
     local -r newSBVersion=$(parse_version ${newVersion} sb)
     local -r sbVersionFile=$(get_sb_version_file)
     if [[ ! -f ${sbVersionFile} ]]; then
-        log "Recording new Spring Boot version ${YELLOW}${newSBVersion}${BLUE}"
+        log "Recording new Spring Boot version ${YELLOW}${newSBVersion}${BLUE}. Only done once."
         echo "${newSBVersion}" > "${sbVersionFile}"
     fi
 
