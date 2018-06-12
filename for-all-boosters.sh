@@ -729,7 +729,7 @@ run_integration_tests() {
         delete_namespace ${canonical_name}
         return
       fi
-      mvn $(maven_settings) -q -B clean verify -Dfabric8.skip=true -Popenshift,openshift-it ${MAVEN_EXTRA_OPTS:-}
+      mvn $(maven_settings) -q -B clean verify -Dfabric8.skip=true -Denv.init.enabled=false -Popenshift,openshift-it ${MAVEN_EXTRA_OPTS:-}
       if [ $? -eq 0 ]; then
           echo
           log "Successfully tested"
