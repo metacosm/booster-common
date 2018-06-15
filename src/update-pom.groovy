@@ -152,7 +152,7 @@ private String effectiveSpringBootVersion(String springBootVersion) {
 }
 
 private void updatePomWithLatestVersions(File pomFile, Map<?, ?> propertyNameToVersionMap) {
-    final pomText = pomFile.text
+    def pomText = pomFile.text
     propertyNameToVersionMap.each { propertyName, highestVersion ->
         pomText = pomText.replaceFirst(
                 String.format("<%s>.*</%s>", propertyName, propertyName),
