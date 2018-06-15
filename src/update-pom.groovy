@@ -155,8 +155,8 @@ private void updatePomWithLatestVersions(File pomFile, Map<?, ?> propertyNameToV
     def pomText = pomFile.text
     propertyNameToVersionMap.each { propertyName, highestVersion ->
         pomText = pomText.replaceFirst(
-                String.format("<%s>.*</%s>", propertyName, propertyName),
-                String.format("<%s>%s</%s>", propertyName, highestVersion, propertyName)
+                String.format("<%s>[^<]*<\\/%s>", propertyName, propertyName),
+                String.format("<%s>%s<\\/%s>", propertyName, highestVersion, propertyName)
         )
     }
 
