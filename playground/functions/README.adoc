@@ -1,0 +1,6 @@
+== One-off functions
+
+These functions were at some point used to operate on the boosters. They are not really reusable but might server as examples and
+record what was done for a particular change.
+
+WARNING: Use with caution, these functions are not particularly documented so please make sure you understand what they do before attempting to use them!
