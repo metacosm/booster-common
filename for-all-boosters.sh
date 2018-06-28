@@ -141,7 +141,7 @@ commit() {
 
 commit_if_changed() {
     if [[ $(git status --porcelain) ]]; then
-        commit ${1}
+        commit "${1}"
     else
         return 1
     fi
