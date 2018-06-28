@@ -142,6 +142,14 @@ commit() {
     fi
 }
 
+commit_if_changed() {
+    if [[ $(git status --porcelain) ]]; then
+        commit "${1}"
+    else
+        return 1
+    fi
+}
+
 compute_new_version() {
     version_expr=${1:-project.version}
     current_version=$(evaluate_mvn_expr ${version_expr})
@@ -423,8 +431,7 @@ replace_template_runtime_version_of_booster() {
         do
             replace_template_runtime_version ${file} ${newVersion}
         done
-        if [[ $(git status --porcelain) ]]; then
-            commit "Update template's RUNTIME_VERSION -> ${newVersion}"
+        if commit_if_changed "Update template's RUNTIME_VERSION -> ${newVersion}"; then
             push_to_remote
         else
             # if no changes were made it means that templates don't contain tokens and should be fixed
@@ -599,9 +606,7 @@ release() {
         do
             replace_template_placeholders ${file} ${releaseVersion}
         done
-        if [[ $(git status --porcelain) ]]; then
-            commit "Replaced templates placeholders: BOOSTER_VERSION -> ${releaseVersion}"
-        else
+        if ! commit_if_changed "Replaced templates placeholders: BOOSTER_VERSION -> ${releaseVersion}"; then
             # if no changes were made it means that templates don't contain tokens and should be fixed
             log_ignored "Couldn't replace tokens in templates"
             return 1
@@ -624,7 +629,7 @@ release() {
 
             rm ${file}.bak
         done
-        commit "Restored templates placeholders: ${releaseVersion} -> BOOSTER_VERSION"
+        commit_if_changed "Restored templates placeholders: ${releaseVersion} -> BOOSTER_VERSION"
     fi
 
     change_version ${nextVersion}
@@ -880,8 +885,7 @@ run_cmd() {
 
     if [ -n "$msg" ]; then
         # we have a commit message so commit and push result of command if that resulted in local changes
-        if [[ $(git status --porcelain) ]]; then
-            commit "${msg}"
+        if commit_if_changed "${msg}"; then
             push_to_remote
         fi
     fi
