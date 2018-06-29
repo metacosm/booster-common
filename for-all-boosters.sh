@@ -309,7 +309,7 @@ setup_booster_locally () {
 }
 
 create_branch() {
-    branch=${1:-$BRANCH}
+    local -r branch=${1:-$BRANCH}
 
     if git ls-remote --heads "${remote}" "${branch}" | grep "${branch}" > /dev/null;
     then
@@ -318,22 +318,15 @@ create_branch() {
         if ! git checkout -b ${branch} > /dev/null 2> /dev/null;
         then
             log_failed "Couldn't create branch"
-            unset branch # unset to avoid side-effects in log
             return 1
         fi
-    fi
 
-    unset branch # unset to avoid side-effects in log
+        push_to_remote "${remote}"
+    fi
 }
 
 delete_branch() {
-    branch=${1:-$BRANCH}
-
-    if element_in "${branch}" "${default_branches[@]}"; then
-        log_failed "Cannot delete protected branch"
-        unset branch # unset to avoid side-effects in log
-        return 1
-    fi
+    local -r branch=${1:-$BRANCH}
 
     if git ls-remote --heads "${remote}" "${branch}" | grep "${branch}" > /dev/null;
     then
@@ -350,8 +343,6 @@ delete_branch() {
     then
         log_ignored "Branch doesn't exist locally"
     fi
-
-    unset branch # unset to avoid side-effects in log
 }
 
 find_openshift_templates() {
@@ -996,8 +987,8 @@ show_help () {
     simple_log "    release                       Release the boosters."
     simple_log "    change_version <args>         Change the project or parent version. Run with ${YELLOW}-h${BLUE} to see help."
     simple_log "    run_integration_tests <deployment type>  Run the integration tests on an OpenShift cluster. Requires to be logged in to the required cluster before executing. Deployment Type can be either ${YELLOW}fmp_deploy${BLUE} (default) or ${YELLOW}s2i_deploy${BLUE}."
-    simple_log "    create_branch                 Create a branch specified by the ${YELLOW}-b${BLUE} option."
-    simple_log "    delete_branch                 Delete a branch specified by the ${YELLOW}-b${BLUE} option."
+    simple_log "    create_branch                 Create a branch specified by the ${YELLOW}-b${BLUE} option. Those branches cannot be any of the protected branches. The new branch is always created off of master"
+    simple_log "    delete_branch                 Delete a branch specified by the ${YELLOW}-b${BLUE} option. Those branches cannot be any of the protected branches"
     simple_log "    cmd <command>                 Execute the provided shell command. The following environment variables can be used by the scripts: ${YELLOW}BOOSTER, BOOSTER_DIR, BRANCH${BLUE}. Run with ${YELLOW}-h${BLUE} to see help."
     simple_log "    fn <function name>            Execute the specified function. This allows to call internal functions. Make sure you know what you're doing!"
     simple_log "    revert                        Revert the booster state to the last remote version."
@@ -1175,9 +1166,25 @@ case "$subcommand" in
     create_branch)
         CREATE_BRANCH='on'
         cmd="create_branch"
+
+        # don't allow creating any of the protected branches
+        for br in "${branches[@]}"
+        do
+          if element_in "${br}" "${default_branches[@]}"; then
+              error "create_branch must be used when with branch(es) specified via -b. The specified branches cannot contain any of the protected branches" 1>&2
+          fi
+        done
     ;;
     delete_branch)
         cmd="delete_branch"
+
+        # don't allow deleting any of the protected branches
+        for br in "${branches[@]}"
+        do
+          if element_in "${br}" "${default_branches[@]}"; then
+              error "delete_branch must be used when with branch(es) specified via -b. The specified branches cannot contain any of the protected branches" 1>&2
+          fi
+        done
     ;;
     change_version)
         # Needed in order to "reset" the options processing for the subcommand
@@ -1361,6 +1368,14 @@ do
               if [ "$bypassUpdate" == off ]; then
                   git fetch -q "${remote}" > /dev/null
 
+                  updateBranch=${BRANCH}
+                  # when the command is create_branch, we need to checkout master in order to create the new branch
+                  # in the case of delete_branch we need to checkout master in order to be able to delete the branch
+                  # since we can't delete the branch that is currently checked out
+                  if [ "$cmd" == "create_branch" ] || [ "$cmd" == "delete_branch" ]; then
+                    updateBranch="master"
+                  fi
+
                   if [ "$IGNORE_LOCAL_CHANGES" != on ]; then
                       # if booster has uncommitted changes, skip it
                       if [[ $(git status --porcelain) ]]; then
@@ -1368,9 +1383,9 @@ do
                           continue
                       fi
 
-                      git checkout -q "${BRANCH}" > /dev/null && git rebase "${remote}"/"${BRANCH}" > /dev/null
+                      git checkout -q "${updateBranch}" > /dev/null && git rebase "${remote}"/"${updateBranch}" > /dev/null
                   else
-                      git checkout -q "${BRANCH}" > /dev/null
+                      git checkout -q "${updateBranch}" > /dev/null
                   fi
               fi
 
