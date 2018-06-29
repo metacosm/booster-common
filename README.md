@@ -39,7 +39,7 @@ when all the boosters are processed.
   
 * Execute a specific parent version increment on all boosters except the specified ones
 
-  `./for-all-boosters.sh -x cache,http change_version -p 24`    
+  `./for-all-boosters.sh -x cache,http change_version -p -v 24`    
 
   The `-x` flag ensures that all boosters are used except `cache` and `http` boosters.
   The `change_version` command will set the parent version (because of the `-p` flag) of the boosters to `24`
