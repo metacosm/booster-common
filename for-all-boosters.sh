@@ -198,7 +198,7 @@ verify_maven_project_setup() {
       # If we were however to do proper error handling for each booster / branch combination
       # we would need to propagate errors (and perhaps the error types) all the way up the call stack
       # to the main booster / branch control loop
-      exit 1
+      return 1
     fi
 }
 
