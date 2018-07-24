@@ -751,17 +751,18 @@ run_smoke_tests() {
 prepare_catalog() {
     # clone launcher-catalog in temp dir if it doesn't already exist
     local -r catalogDir="${WORK_DIR}/launcher-booster-catalog"
+    local -r officialBranchName="official"
     if [[ ! -d  ${catalogDir} ]]; then
-        log "Preparing launcher-booster-catalog temporary clone. Only done once." 1>&2
-        if ! git clone git@github.com:snowdrop/launcher-booster-catalog.git ${catalogDir} 1>&2 2> /dev/null; then
-            simple_log "Could not check out launcher-booster-catalog"
+        log "Preparing launcher-booster-catalog temporary clone, checking out ${YELLOW}official${BLUE} branch. Only done once." 1>&2
+        if ! git clone -b ${officialBranchName} git@github.com:snowdrop/launcher-booster-catalog.git ${catalogDir} 1>&2 2> /dev/null; then
+            simple_log "Could not clone launcher-booster-catalog"
             return 1
         fi
         # make sure that our copy is up-to-date with upstream version and create a branch
         pushd ${catalogDir} > /dev/null
         git remote add upstream git@github.com:fabric8-launcher/launcher-booster-catalog.git 1>&2 2> /dev/null
         git pull --rebase upstream master 1>&2 > /dev/null 2> /dev/null
-        git push origin master 1>&2 > /dev/null 2> /dev/null
+        git push origin ${officialBranchName} 1>&2 > /dev/null 2> /dev/null
         popd > /dev/null
     fi
 
