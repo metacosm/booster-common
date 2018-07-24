@@ -435,8 +435,8 @@ replace_template_runtime_version_of_booster() {
 }
 
 # based on https://stackoverflow.com/a/10583562 for the components result.
-# Note that to retrieve the components, the variable must be named 'components' on the calling site and needs to be 'eval'ed:
-# local components; components=eval $(parse_version 1.5.13-2-SNAPSHOT)
+# Note that to retrieve the components, just `eval` the function and it will make produce `components` array containing the version components
+# eval $(parse_version 1.5.13-2-SNAPSHOT)
 # For single component retrieval, regular evaluation can be used:
 # local -r sbVersion=$(parse_version 1.5.13-2-SNAPSHOT sb) will evaluate to '1.5.13'
 parse_version() {
@@ -472,6 +472,7 @@ parse_version() {
             ;;
         esac
     else
+        log_failed "${YELLOW}${currentVersion}${BLUE} does not match expected version format"
         return 1
     fi
 }
@@ -519,70 +520,63 @@ release() {
         return 1
     fi
 
-    local -r versionRE='([1-9].[0-9].[0-9]+)-([0-9]+)-?([a-zA-Z0-9]+)?-?(SNAPSHOT)?'
-    if [[ "${currentVersion}" =~ ${versionRE} ]]; then
-        local -r sbVersion=${BASH_REMATCH[1]}
-        local -r versionInt=${BASH_REMATCH[2]}
-        local -r newVersionInt=$((versionInt + 1))
-        local qualifier=${BASH_REMATCH[3]}
-        local snapshot=${BASH_REMATCH[4]}
+    local -a components
+    eval $(parse_version ${currentVersion})
+    local -r sbVersion=${components[0]}
+    local -r versionInt=${components[1]}
+    local -r newVersionInt=$((versionInt + 1))
+    local qualifier=${components[2]}
+    local snapshot=${components[3]}
 
-        # check that booster version is greater than latest tag
-        local -r latestTag=$(get_latest_tag)
-        if [[ "${latestTag}" =~ ${versionRE} ]]; then
-            local error=0
-            # first check SB version
-            local -r tagSBVersion=${BASH_REMATCH[1]}
-
-            version_compare ${tagSBVersion} ${sbVersion}
-            case $? in
-                1)
-                    error=1
-                ;;
-                0)
-                # if SB versions are equal, check sub-version
-                    local -r tagVersion=${BASH_REMATCH[2]}
-                    if ((tagVersion >= versionInt)); then
-                        error=1
-                    fi
-                ;;
-            esac
-            if ((error == 1)); then
-                log_failed "Booster version '${YELLOW}${currentVersion}${RED}' is older than latest released version '${YELLOW}${latestTag}${RED}'"
-                return 1
+    # check that booster version is greater than latest tag
+    local -r latestTag=$(get_latest_tag)
+    local -r tagSBVersion=$(parse_version ${latestTag} sb)
+    local error=0
+    # first check SB version
+    version_compare ${tagSBVersion} ${sbVersion}
+    case $? in
+        1)
+            error=1
+        ;;
+        0)
+        # if SB versions are equal, check sub-version
+            local -r tagVersion=${BASH_REMATCH[2]}
+            if ((tagVersion >= versionInt)); then
+                error=1
             fi
-        fi
-
-
-        # needed because when no qualifier exists, the regex captures this is different order
-        if [ -z ${snapshot} ] && [ "$qualifier" == SNAPSHOT ]; then
-            qualifier=""
-            snapshot="SNAPSHOT"
-        fi
-
-        if [[ ! -z ${qualifier} ]]; then
-            local -r allowedQualifiers=(redhat rhoar)
-            if [[ ! " ${allowedQualifiers[@]} " =~ " ${qualifier} " ]]; then
-                # when there is a qualifier present and it's not one of the allowed values, fail
-                log_ignored "Qualifier ${qualifier} is not allowed. Please check the version of the booster"
-                return 1
-            fi
-        fi
-
-        releaseVersion="${sbVersion}-${versionInt}"
-        if [[ -n "${qualifier}" ]]; then
-            releaseVersion="${releaseVersion}-${qualifier}"
-        fi
-
-        nextVersion="${sbVersion}-${newVersionInt}"
-        if [[ -n "${qualifier}" ]]; then
-            nextVersion="${nextVersion}-${qualifier}"
-        fi
-        nextVersion="${nextVersion}-SNAPSHOT"
-    else
-        log_failed "${YELLOW}${currentVersion} does not match expected version format"
+        ;;
+    esac
+    if ((error == 1)); then
+        log_failed "Booster version '${YELLOW}${currentVersion}${RED}' is older than latest released version '${YELLOW}${latestTag}${RED}'"
         return 1
     fi
+
+
+    # needed because when no qualifier exists, the regex captures this is different order
+    if [ -z ${snapshot} ] && [ "$qualifier" == SNAPSHOT ]; then
+        qualifier=""
+        snapshot="SNAPSHOT"
+    fi
+
+    if [[ ! -z ${qualifier} ]]; then
+        local -r allowedQualifiers=(redhat rhoar)
+        if [[ ! " ${allowedQualifiers[@]} " =~ " ${qualifier} " ]]; then
+            # when there is a qualifier present and it's not one of the allowed values, fail
+            log_ignored "Qualifier ${qualifier} is not allowed. Please check the version of the booster"
+            return 1
+        fi
+    fi
+
+    releaseVersion="${sbVersion}-${versionInt}"
+    if [[ -n "${qualifier}" ]]; then
+        releaseVersion="${releaseVersion}-${qualifier}"
+    fi
+
+    nextVersion="${sbVersion}-${newVersionInt}"
+    if [[ -n "${qualifier}" ]]; then
+        nextVersion="${nextVersion}-${qualifier}"
+    fi
+    nextVersion="${nextVersion}-SNAPSHOT"
 
     if git ls-remote --tags "${remote}" "${releaseVersion}" | grep "${releaseVersion}" > /dev/null;
     then
