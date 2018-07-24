@@ -69,6 +69,9 @@ declare -a ignored=( )
 # processed boosters
 declare -a processed=( )
 
+# boosters which maven project is validated
+declare -a validated=( )
+
 maven_settings() {
     if [[ -z "${MAVEN_SETTINGS}" ]]; then
       echo ""
@@ -191,14 +194,18 @@ element_in() {
 }
 
 verify_maven_project_setup() {
-    mvn $(maven_settings) dependency:analyze > /dev/null
-    if [ $? -ne 0 ]; then
-      log_failed "Unable to verify that the booster was setup correctly locally - some dependencies seem to be missing"
-      # Definitely not the optimal solution for handling errors
-      # If we were however to do proper error handling for each booster / branch combination
-      # we would need to propagate errors (and perhaps the error types) all the way up the call stack
-      # to the main booster / branch control loop
-      return 1
+    local -r key="${BOOSTER}:${BRANCH}"
+    if ! element_in ${key} "${validated[@]}"; then
+        mvn $(maven_settings) dependency:analyze > /dev/null
+        if [ $? -ne 0 ]; then
+            log_failed "Unable to verify that the booster was setup correctly locally - some dependencies seem to be missing"
+            # Definitely not the optimal solution for handling errors
+            # If we were however to do proper error handling for each booster / branch combination
+            # we would need to propagate errors (and perhaps the error types) all the way up the call stack
+            # to the main booster / branch control loop
+            return 1
+        fi
+        validated+=( ${key} )
     fi
 }
 
