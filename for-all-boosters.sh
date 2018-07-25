@@ -542,6 +542,8 @@ release() {
 
     local -r currentVersion=$(evaluate_mvn_expr 'project.version')
 
+    local -r pncBuildQualifier=${1:-CR1}
+
     if [[ "${currentVersion}" != *-SNAPSHOT ]]; then
         log_ignored "Cannot release a non-snapshot version"
         return 1
@@ -646,8 +648,7 @@ release() {
 
     change_version ${nextVersion}
 
-    prod_tag ${sbVersion}
-
+    prod_tag ${sbVersion} ${pncBuildQualifier}
 
     # switch pushing back on and push
     PUSH='on'
@@ -656,6 +657,7 @@ release() {
 
 prod_tag() {
     local -r sbVersion=${1?"Usage prod_tag <spring boot version to release>"}
+    local -r pncBuildQualifier=${2:-CR1}
 
     # fail if we're not on master branch
     local -r branch=$(git rev-parse --abbrev-ref HEAD)
@@ -691,7 +693,7 @@ prod_tag() {
 
     # update the pom to use the proper prod BOM version
     # retrieve the prod BOM version: requires being connected to VPN
-    local -r prodBOMVersion=$(curl -s http://rcm-guest.app.eng.bos.redhat.com/rcm-guest/staging/rhoar/spring-boot/spring-boot-${sbVersion}.CR1/extras/repository-artifact-list.txt | grep spring-boot-bom | cut -d: -f3)
+    local -r prodBOMVersion=$(curl -s http://rcm-guest.app.eng.bos.redhat.com/rcm-guest/staging/rhoar/spring-boot/spring-boot-${sbVersion}.${pncBuildQualifier}/extras/repository-artifact-list.txt | grep spring-boot-bom | cut -d: -f3)
     set_maven_property "spring-boot-bom.version" ${prodBOMVersion}
     commit_if_changed "Update BOM to version ${prodBOMVersion}"
 
@@ -703,7 +705,7 @@ prod_tag() {
     log "Creating tag ${YELLOW}${releaseVersion}"
     git tag -a ${nextProdTag} -m "Releasing ${releaseVersion}" > /dev/null
 
-    # switch back to master and delete ephemeral branc
+    # switch back to master and delete ephemeral branch
     git checkout ${branch} >/dev/null 2>/dev/null
     git branch -D "${ephemeralBranch}"
 }
