@@ -858,6 +858,7 @@ get_sb_version_file() {
 
 catalog() {
     local -r newSBVersion=${1?"Usage catalog <Spring Boot version associated with this update>"}
+    local -r branch=${2:-$BRANCH}
     declare -Ar catalog_branch_mapping=( ["master"]="current-community" ["redhat"]="current-redhat" ["osio"]="current-osio" )
     declare -Ar catalog_booster_mapping=( ["http"]="rest-http" ["http-secured"]="rest-http-secured" )
 
@@ -870,9 +871,9 @@ catalog() {
     fi
 
     # get the YAML file for the booster / branch combination
-    local -r catalogVersion=${catalog_branch_mapping[${BRANCH}]}
+    local -r catalogVersion=${catalog_branch_mapping[${branch}]}
     if [[ ! -n ${catalogVersion} ]]; then
-        log_ignored "No mapping exist for branch ${YELLOW}${BRANCH}"
+        log_ignored "No mapping exist for branch ${YELLOW}${branch}"
         return 1
     fi
     local catalogMission=${catalog_booster_mapping[${simpleName}]}
