@@ -857,6 +857,7 @@ get_sb_version_file() {
 }
 
 catalog() {
+    local -r newSBVersion=${1?"Usage catalog <Spring Boot version associated with this update>"}
     declare -Ar catalog_branch_mapping=( ["master"]="current-community" ["redhat"]="current-redhat" ["osio"]="current-osio" )
     declare -Ar catalog_booster_mapping=( ["http"]="rest-http" ["http-secured"]="rest-http-secured" )
 
@@ -887,14 +888,6 @@ catalog() {
     fi
 
     local -r newVersion=$(get_latest_tag "${BOOSTERS_DIR}/${BOOSTER}")
-
-    # record new SB version
-    local -r newSBVersion=$(parse_version ${newVersion} sb)
-    local -r sbVersionFile=$(get_sb_version_file)
-    if [[ ! -f ${sbVersionFile} ]]; then
-        log "Recording new Spring Boot version ${YELLOW}${newSBVersion}${BLUE}. Only done once."
-        echo "${newSBVersion}" > "${sbVersionFile}"
-    fi
 
     # update metadata.yaml if we haven't already done it
     local -r metadataYAML=${catalogDir}"/metadata.yaml"
