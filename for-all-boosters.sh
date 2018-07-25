@@ -434,6 +434,14 @@ replace_template_runtime_version_of_booster() {
     fi
 }
 
+# Extracts the possible components of a Snowdrop artifact version (BOM / booster) from specified version string
+# Usage: parse_version <version string to parse> [sb | own | qualifier | snapshot | components] (defaults to 'components')
+# where, given, for example, the '1.5.14-2-redhat-SNAPSHOT' version string
+#   sb          -> Spring Boot version                                          => '1.5.14'
+#   own         -> Artifact own version                                         => '2'
+#   qualifier   -> Artifact qualifier if it exists, empty otherwise             => 'redhat'
+#   snapshot    -> "SNAPSHOT" if the artifact is a snapshot, empty otherwise    => 'SNAPSHOT'
+#   components  -> Array of the above components as strings                     => ('1.5.14' '2' 'redhat' 'SNAPSHOT')
 # based on https://stackoverflow.com/a/10583562 for the components result.
 # Note that to retrieve the components, just `eval` the function and it will make produce `components` array containing the version components
 # eval $(parse_version 1.5.13-2-SNAPSHOT)
