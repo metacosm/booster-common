@@ -192,8 +192,14 @@ get_latest_tag() {
     fi
 }
 
+get_latest_prod_tag() {
+    local -r sbVersion=${1?"get_latest_prod_tag <Spring Boot version for which to get the latest tag>"}
+    local -r gitDir=${2:-.}
+    echo "$(git -C ${gitDir} tag -l "${sbVersion}*-redhat" | sort --version-sort --reverse | head -n1)"
+}
+
 get_next_prod_tag() {
-    local -r sbVersion=${1}
+    local -r sbVersion=${1?"get_next_prod_tag <Spring Boot version for which to compute the next tag>"}
     local -r latestTag=$(git tag -l "${sbVersion}*-redhat" | sort --version-sort --reverse | head -n1)
     if [[ -z "${latestTag}" ]]; then
         # if we don't have a tag for this specific SB version, then generate it
@@ -875,6 +881,12 @@ get_sb_version_file() {
 
 catalog() {
     local -r newSBVersion=${1?"Usage catalog <Spring Boot version associated with this update>"}
+    _catalog ${newSBVersion} "master"
+    _catalog ${newSBVersion} "redhat"
+}
+
+_catalog() {
+    local -r newSBVersion=${1?"Usage catalog <Spring Boot version associated with this update>"}
     local -r branch=${2:-$BRANCH}
     declare -Ar catalog_branch_mapping=( ["master"]="current-community" ["redhat"]="current-redhat" ["osio"]="current-osio" )
     declare -Ar catalog_booster_mapping=( ["http"]="rest-http" ["http-secured"]="rest-http-secured" )
@@ -905,7 +917,15 @@ catalog() {
         return 1
     fi
 
-    local -r newVersion=$(get_latest_tag "${BOOSTERS_DIR}/${BOOSTER}")
+    local -r newVersion
+    case ${branch} in
+        redhat)
+            newVersion==$(get_latest_prod_tag ${newSBVersion} "${BOOSTERS_DIR}/${BOOSTER}")
+        ;;
+        *)
+            newVersion==$(get_latest_tag "${BOOSTERS_DIR}/${BOOSTER}")
+        ;;
+    esac
 
     # update metadata.yaml if we haven't already done it
     local -r metadataYAML=${catalogDir}"/metadata.yaml"
@@ -1262,6 +1282,9 @@ case "$subcommand" in
         preCmd="prepare_catalog"
         cmd="catalog"
         postCmd="open_catalog_pr"
+        branches=( "master" )
+        echo -e "${YELLOW}== Catalog only works on the '${BLUE}master${YELLOW}' branch, disregarding any branch set by -b option ==${NC}"
+        echo
     ;;
     create_branch)
         CREATE_BRANCH='on'
