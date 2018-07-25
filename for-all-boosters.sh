@@ -189,6 +189,18 @@ get_latest_tag() {
     fi
 }
 
+get_next_prod_tag() {
+    local -r sbVersion=${1}
+    local -r latestTag=$(git tag -l "${sbVersion}*-redhat" | sort --version-sort --reverse | head -n1)
+    if [[ -z "${latestTag}" ]]; then
+        # if we don't have a tag for this specific SB version, then generate it
+        echo "${sbVersion}-1-redhat"
+    else
+        local -r version=$(parse_version ${latestTag} 'own')
+        echo "${sbVersion}-$((version +1))-redhat"
+    fi
+}
+
 # check that first arg is contained in array second arg
 # see: https://stackoverflow.com/a/8574392
 # returns 0 if found, 1 if not
@@ -634,11 +646,63 @@ release() {
 
     change_version ${nextVersion}
 
+    prod_tag ${sbVersion}
+
+
     # switch pushing back on and push
     PUSH='on'
     push_to_remote "${remote}" "--tags"
+}
 
+prod_tag() {
+    local -r sbVersion=${1?"Usage prod_tag <spring boot version to release>"}
 
+    # fail if we're not on master branch
+    local -r branch=$(git rev-parse --abbrev-ref HEAD)
+    if [ "${branch}" != master ]; then
+        log_failed "Cannot create prod tag if not on master branch"
+        return 1
+    fi
+
+    ## create prod tag
+    # compute tag name
+    local -r nextProdTag=$(get_next_prod_tag "${sbVersion}")
+    # create ephemeral branch to anchor tag
+    local -r ephemeralBranch="${nextProdTag}-branch"
+    git checkout -b "${ephemeralBranch}" >/dev/null 2>/dev/null
+    log "Switched to '${ephemeralBranch}' branch"
+    # update project version
+    mvn $(maven_settings) versions:set -DnewVersion=${nextProdTag} > /dev/null
+    find . -name "*.versionsBackup" -delete
+    commit "Update booster to version ${nextProdTag}"
+
+    # update templates with proper version
+    if [ ${#templates[@]} != 0 ]; then
+        for file in ${templates[@]}
+        do
+            replace_template_placeholders ${file} ${nextProdTag}
+        done
+        if [[ $(git status --porcelain) ]]; then
+            commit "Replaced templates placeholders: BOOSTER_VERSION -> ${nextProdTag}"
+        else
+            # if no changes were made it means that templates don't contain tokens and should be fixed
+            log_ignored "Couldn't replace tokens in templates"
+            return 1
+        fi
+    fi
+
+    # update the pom to use the proper prod BOM version
+    # retrieve the prod BOM version: requires being connected to VPN
+    local -r prodBOMVersion=$(curl -s http://rcm-guest.app.eng.bos.redhat.com/rcm-guest/staging/rhoar/spring-boot/spring-boot-${sbVersion}.CR1/extras/repository-artifact-list.txt | grep spring-boot-bom | cut -d: -f3)
+    set_maven_property "spring-boot-bom.version" ${prodBOMVersion}
+    commit "Update BOM to version ${prodBOMVersion}"
+
+    # update the Spring Boot version property (which might be redundant if we're just releasing a new version of the booster)
+    local -r sbReleaseVersion="${sbVersion}.RELEASE"
+    set_maven_property "spring-boot.version" ${sbReleaseVersion}
+    commit "Update Spring Boot to version ${sbReleaseVersion}"
+
+#    git checkout ${branch} >/dev/null 2>/dev/null
 }
 
 do_revert() {
@@ -892,6 +956,7 @@ run_cmd() {
 }
 
 revert_release() {
+    #TODO need to remove created prod tag
     # release process creates 4 commits that we need to revert
     git revert --no-commit HEAD~4..
     local -r previousSHA=$(git rev-list HEAD~5..HEAD~4)
@@ -1059,7 +1124,7 @@ if [ $# -eq 0 ]; then
     show_help
 fi
 
-readonly default_branches=("master" "redhat")
+readonly default_branches=("master")
 branches=("${default_branches[@]}")
 
 readonly default_remote=upstream
@@ -1104,7 +1169,7 @@ while getopts ":hdnfspq:b:r:m:x:l:" opt; do
             echo
         ;;
         b)
-            IFS=',' read -r -a branches <<< "$OPTARG"
+            IFS=',' read -a branches <<< "$OPTARG"
             echo -e "${YELLOW}== Will use '${BLUE}$OPTARG${YELLOW}' branch(es) instead of the default ${BLUE}'$(IFS=,; echo "${default_branches[*]}")${YELLOW}' ==${NC}"
             echo
         ;;
@@ -1172,6 +1237,9 @@ case "$subcommand" in
             exit 1
         fi
         cmd="release"
+        branches=( "master" )
+        echo -e "${YELLOW}== Release only works on the '${BLUE}master${YELLOW}' branch, disregarding any branch set by -b option ==${NC}"
+        echo
     ;;
     catalog)
         cmd="catalog"
