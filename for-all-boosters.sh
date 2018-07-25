@@ -674,7 +674,7 @@ prod_tag() {
     # update project version
     mvn $(maven_settings) versions:set -DnewVersion=${nextProdTag} > /dev/null
     find . -name "*.versionsBackup" -delete
-    commit "Update booster to version ${nextProdTag}"
+    commit_if_changed "Update booster to version ${nextProdTag}"
 
     # update templates with proper version
     if [ ${#templates[@]} != 0 ]; then
@@ -682,9 +682,7 @@ prod_tag() {
         do
             replace_template_placeholders ${file} ${nextProdTag}
         done
-        if [[ $(git status --porcelain) ]]; then
-            commit "Replaced templates placeholders: BOOSTER_VERSION -> ${nextProdTag}"
-        else
+        if ! commit_if_changed "Replaced templates placeholders: BOOSTER_VERSION -> ${nextProdTag}"; then
             # if no changes were made it means that templates don't contain tokens and should be fixed
             log_ignored "Couldn't replace tokens in templates"
             return 1
@@ -695,12 +693,12 @@ prod_tag() {
     # retrieve the prod BOM version: requires being connected to VPN
     local -r prodBOMVersion=$(curl -s http://rcm-guest.app.eng.bos.redhat.com/rcm-guest/staging/rhoar/spring-boot/spring-boot-${sbVersion}.CR1/extras/repository-artifact-list.txt | grep spring-boot-bom | cut -d: -f3)
     set_maven_property "spring-boot-bom.version" ${prodBOMVersion}
-    commit "Update BOM to version ${prodBOMVersion}"
+    commit_if_changed "Update BOM to version ${prodBOMVersion}"
 
     # update the Spring Boot version property (which might be redundant if we're just releasing a new version of the booster)
     local -r sbReleaseVersion="${sbVersion}.RELEASE"
     set_maven_property "spring-boot.version" ${sbReleaseVersion}
-    commit "Update Spring Boot to version ${sbReleaseVersion}"
+    commit_if_changed "Update Spring Boot to version ${sbReleaseVersion}"
 
 #    git checkout ${branch} >/dev/null 2>/dev/null
 }
