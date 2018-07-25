@@ -685,7 +685,7 @@ prod_tag() {
     # create ephemeral branch to anchor tag
     local -r ephemeralBranch="${nextProdTag}-branch"
     git checkout -b "${ephemeralBranch}" >/dev/null 2>/dev/null
-    log "Switched to '${ephemeralBranch}' branch"
+    log "Switched to ${YELLOW}${ephemeralBranch}${BLUE} branch"
     # update project version
     mvn $(maven_settings) versions:set -DnewVersion=${nextProdTag} > /dev/null
     find . -name "*.versionsBackup" -delete
@@ -715,8 +715,8 @@ prod_tag() {
     set_maven_property "spring-boot.version" ${sbReleaseVersion}
     commit_if_changed "Update Spring Boot to version ${sbReleaseVersion}"
 
-    log "Creating tag ${YELLOW}${releaseVersion}"
-    git tag -a ${nextProdTag} -m "Releasing ${releaseVersion}" > /dev/null
+    log "Creating tag ${YELLOW}${nextProdTag}"
+    git tag -a ${nextProdTag} -m "Releasing ${nextProdTag}" > /dev/null
 
     # switch back to master and delete ephemeral branch
     git checkout ${branch} >/dev/null 2>/dev/null
