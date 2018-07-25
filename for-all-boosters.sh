@@ -844,9 +844,13 @@ run_smoke_tests() {
     fi
 }
 
+get_catalog_dir() {
+    echo "${WORK_DIR}/launcher-booster-catalog"
+}
+
 prepare_catalog() {
     # clone launcher-catalog in temp dir if it doesn't already exist
-    local -r catalogDir="${WORK_DIR}/launcher-booster-catalog"
+    local -r catalogDir=$(get_catalog_dir)
     local -r officialBranchName="official"
     if [[ ! -d  ${catalogDir} ]]; then
         log "Preparing launcher-booster-catalog temporary clone, checking out ${YELLOW}official${BLUE} branch. Only done once." 1>&2
@@ -877,7 +881,7 @@ catalog() {
 
     local -r simpleName=$(simple_name)
     # get the catalog project
-    local -r catalogDir=$(prepare_catalog)
+    local -r catalogDir=$(get_catalog_dir)
     if [ $? -ne 0 ]; then
         log_failed "Unable to retrieve launcher-booster-catalog"
         return 1
@@ -926,7 +930,7 @@ catalog() {
 }
 
 open_catalog_pr() {
-    local -r catalogDir=$(prepare_catalog)
+    local -r catalogDir=$(get_catalog_dir)
     pushd ${catalogDir} > /dev/null
     local -r sbVersion=$(cat "$(get_sb_version_file)")
     local -r branchName="update-to-${sbVersion}"
@@ -1255,6 +1259,7 @@ case "$subcommand" in
         echo
     ;;
     catalog)
+        preCmd="prepare_catalog"
         cmd="catalog"
         postCmd="open_catalog_pr"
     ;;
