@@ -1241,6 +1241,7 @@ shift $((OPTIND - 1))
 
 subcommand=$1
 cmd=""
+declare preCmd
 declare postCmd
 case "$subcommand" in
     release)
@@ -1410,6 +1411,15 @@ if [ ${#all_boosters_from_github[@]} == 0 ]; then
     exit 1
 fi
 pushd ${BOOSTERS_DIR} > /dev/null
+
+if [ -n "${preCmd}" ]; then
+    simple_log "Executing pre-boosters processing command '${YELLOW}${preCmd}${BLUE}'"
+    if ! ${preCmd}; then
+        simple_log "Couldn't run ${YELLOW}${preCmd}"
+        echo
+    fi
+fi
+
 
 for booster_line in ${all_boosters_from_github[@]}
 do
