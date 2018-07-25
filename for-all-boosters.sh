@@ -700,7 +700,12 @@ prod_tag() {
     set_maven_property "spring-boot.version" ${sbReleaseVersion}
     commit_if_changed "Update Spring Boot to version ${sbReleaseVersion}"
 
-#    git checkout ${branch} >/dev/null 2>/dev/null
+    log "Creating tag ${YELLOW}${releaseVersion}"
+    git tag -a ${nextProdTag} -m "Releasing ${releaseVersion}" > /dev/null
+
+    # switch back to master and delete ephemeral branc
+    git checkout ${branch} >/dev/null 2>/dev/null
+    git branch -D "${ephemeralBranch}"
 }
 
 do_revert() {
