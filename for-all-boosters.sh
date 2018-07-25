@@ -72,6 +72,9 @@ declare -a processed=( )
 # boosters which maven project is validated
 declare -a validated=( )
 
+# production BOM version
+declare _prodBOMVersion
+
 maven_settings() {
     if [[ -z "${MAVEN_SETTINGS}" ]]; then
       echo ""
@@ -655,6 +658,16 @@ release() {
     push_to_remote "${remote}" "--tags"
 }
 
+get_prod_BOM_version() {
+    local -r sbVersion=${1?"Usage prod_tag <spring boot version to release>"}
+    local -r pncBuildQualifier=${2:-CR1}
+
+    if [ -z "${_prodBOMVersion}" ]; then
+        _prodBOMVersion=$(curl -s http://rcm-guest.app.eng.bos.redhat.com/rcm-guest/staging/rhoar/spring-boot/spring-boot-${sbVersion}.${pncBuildQualifier}/extras/repository-artifact-list.txt | grep spring-boot-bom | cut -d: -f3)
+    fi
+    echo ${_prodBOMVersion}
+}
+
 prod_tag() {
     local -r sbVersion=${1?"Usage prod_tag <spring boot version to release>"}
     local -r pncBuildQualifier=${2:-CR1}
@@ -693,7 +706,7 @@ prod_tag() {
 
     # update the pom to use the proper prod BOM version
     # retrieve the prod BOM version: requires being connected to VPN
-    local -r prodBOMVersion=$(curl -s http://rcm-guest.app.eng.bos.redhat.com/rcm-guest/staging/rhoar/spring-boot/spring-boot-${sbVersion}.${pncBuildQualifier}/extras/repository-artifact-list.txt | grep spring-boot-bom | cut -d: -f3)
+    local -r prodBOMVersion=$(get_prod_BOM_version ${sbVersion} ${pncBuildQualifier})
     set_maven_property "spring-boot-bom.version" ${prodBOMVersion}
     commit_if_changed "Update BOM to version ${prodBOMVersion}"
 
