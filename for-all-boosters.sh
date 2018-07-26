@@ -245,7 +245,7 @@ change_version() {
     local -r currentVersion=$(evaluate_mvn_expr ${expr})
     local cmd="mvn $(maven_settings) versions:set -DnewVersion=${newVersion} > /dev/null"
     if [ "${targetParent}" == true ]; then
-        local escapedCurrent=$(sed 's|[]\/$*.^[]|\\&|g' <<< ${currentVersion})
+        local escapedCurrent=$(escape_expr ${currentVersion})
         # see: https://unix.stackexchange.com/a/92907
         cmd="perl -pi -e 's/<version>${escapedCurrent}</<version>${newVersion}</g' pom.xml"
     fi
@@ -365,13 +365,33 @@ find_openshift_templates() {
 }
 
 replace_template_placeholders() {
-  local file=${1}
-  local booster_version=${2}
+    local -r file=${1}
+    local -r booster_version=${2}
 
-  sed -i.bak -e "s/BOOSTER_VERSION/${booster_version}/g" ${file}
-  log "${YELLOW}${file}${BLUE}: Replaced BOOSTER_VERSION token by ${booster_version}"
+    replace ${file} "BOOSTER_VERSION" ${booster_version}
+}
 
-  rm ${file}.bak
+escape_expr() {
+    echo $(sed 's|[]\/$*.^[]|\\&|g' <<< ${1})
+}
+
+# Replaces the second arg by the third one in the file identified by the first arg:
+# ex: replace pom.xml '<classifier>exec</classifier>' '<!--<classifier>exec</classifier>-->'
+# Note that the patterns are sensitive to white spaces so while the above command does what you'd expect,
+# replace pom.xml '<classifier>exec</classifier>' '<!-- <classifier>exec</classifier> -->' doesn't (the replacement is only '<!-- ')
+replace() {
+    local -r file=${1}
+    local -r original=${2}
+    local -r replacement=${3}
+
+    local -r escapedOriginal=$(escape_expr ${original})
+    local -r escapedReplacement=$(escape_expr ${replacement})
+
+    if perl -pi -e "s/${escapedOriginal}/${escapedReplacement}/g" ${file}; then
+        log "${YELLOW}${file}${BLUE}: Replaced ${original} by ${replacement}"
+    else
+        log_ignored "${YELLOW}${file}${BLUE}: Couldn't replace ${original} by ${replacement}"
+    fi
 }
 
 # Extracts the image that is used in a template
@@ -624,10 +644,7 @@ release() {
         # restore template placeholders
         for file in ${templates[@]}
         do
-            sed -i.bak -e "s/${releaseVersion}/BOOSTER_VERSION/g" ${file}
-            log "${YELLOW}${file}${BLUE}: Restored BOOSTER_VERSION token"
-
-            rm ${file}.bak
+            replace ${file} ${releaseVersion} "BOOSTER_VERSION"
         done
         commit_if_changed "Restored templates placeholders: ${releaseVersion} -> BOOSTER_VERSION"
     fi
