@@ -145,6 +145,7 @@ commit() {
     fi
 }
 
+# Commits changes with the specified commit message only if there are local changes. Returns 1 if there are no changes.
 commit_if_changed() {
     if [[ $(git status --porcelain) ]]; then
         commit "${1}"
@@ -238,6 +239,8 @@ verify_maven_project_setup() {
     fi
 }
 
+# Changes the version of the current booster to the specified one or computes it. If changes occurred, commit and push to remote.
+# Usage: change_version <new version | 'compute'> <JIRA issue number to prefix to commit message>
 change_version() {
     # The first thing we do is make sure the project's dependencies are valid
     # This is done because if it were not,
@@ -247,16 +250,15 @@ change_version() {
     # with a clear indication of what went wrong
     verify_maven_project_setup
 
-    newVersion=${1:-compute}
-    targetParent=${2:-false}
-
-    # if we provide a 3rd arg, switch to parent processing instead
-    expr="project.version"
-    target="project"
-    if [ "${targetParent}" == true ]; then
-        expr="project.parent.version"
-        target="parent"
+    local newVersion=${1:-compute}
+    local jira
+    if [ -n "${2}" ]; then
+        jira=${2}": "
+    else
+        jira=""
     fi
+
+    local -r expr="project.version"
 
     # if provided version is "compute" then compute the new version :)
     if [[ "${newVersion}" == compute ]]; then
@@ -264,41 +266,10 @@ change_version() {
     fi
 
     local -r currentVersion=$(evaluate_mvn_expr ${expr})
-    local cmd="mvn $(maven_settings) versions:set -DnewVersion=${newVersion} > /dev/null"
-    if [ "${targetParent}" == true ]; then
-        local escapedCurrent=$(sed 's|[]\/$*.^[]|\\&|g' <<< ${currentVersion})
-        # see: https://unix.stackexchange.com/a/92907
-        cmd="perl -pi -e 's/<version>${escapedCurrent}</<version>${newVersion}</g' pom.xml"
-    fi
-    
-    if eval ${cmd}; then
+    if mvn $(maven_settings) versions:set -DnewVersion=${newVersion} > /dev/null; then
         # Only attempt committing if we have changes otherwise the script will exit
-        if [[ $(git status --porcelain) ]]; then
-            log "Updated ${target} from ${YELLOW}${currentVersion}${BLUE} to ${YELLOW}${newVersion}"
-            log "Running verification build"
-            if mvn $(maven_settings) $(maven_tests_expression) clean verify > build.log; then
-                log "Build ${YELLOW}OK"
-                rm build.log
-
-                if [ -n "$3" ]; then
-                    jira=${3}": "
-                else
-                    jira=""
-                fi
-                commit ${jira}"Update ${target} version to ${newVersion}"
-
-                push_to_remote
-
-                # When dry-run is enabled, revert local changes in order leave things the way we found them :)
-                if [[ "$COMMIT" == off ]]; then
-                  CONFIRMATION_NEEDED='off'
-                  revert
-                fi
-            else
-                log_failed "Build failed! Check ${YELLOW}build.log"
-                log "You will need to reset the branch or explicitly set the parent before running this script again."
-            fi
-
+        if commit_if_changed ${jira}"Update version to ${newVersion}"; then
+            push_to_remote
         else
             log_ignored "Version was already at ${YELLOW}${newVersion}"
         fi
@@ -693,9 +664,7 @@ prod_tag() {
     git checkout -b "${ephemeralBranch}" >/dev/null 2>/dev/null
     log "Switched to ${YELLOW}${ephemeralBranch}${BLUE} branch"
     # update project version
-    mvn $(maven_settings) versions:set -DnewVersion=${nextProdTag} > /dev/null
-    find . -name "*.versionsBackup" -delete
-    commit_if_changed "Update booster to version ${nextProdTag}"
+    change_version ${nextProdTag}
 
     # update templates with proper version
     if [ ${#templates[@]} != 0 ]; then
@@ -1100,7 +1069,7 @@ show_help () {
     simple_log "    -r                            The name of the git remote to use for the boosters, for example upstream or origin. The default value is ${YELLOW}${default_remote}${BLUE}."
     simple_log "    -s                            Skip the test execution."
     simple_log "    release                       Release the boosters."
-    simple_log "    change_version <args>         Change the project or parent version. Run with ${YELLOW}-h${BLUE} to see help."
+    simple_log "    change_version <args>         Change the project version. Run with ${YELLOW}-h${BLUE} to see help."
     simple_log "    run_integration_tests <deployment type>  Run the integration tests on an OpenShift cluster. Requires to be logged in to the required cluster before executing. Deployment Type can be either ${YELLOW}fmp_deploy${BLUE} (default) or ${YELLOW}s2i_deploy${BLUE}."
     simple_log "    create_branch                 Create a branch specified by the ${YELLOW}-b${BLUE} option. Those branches cannot be any of the protected branches. The new branch is always created off of master"
     simple_log "    delete_branch                 Delete a branch specified by the ${YELLOW}-b${BLUE} option. Those branches cannot be any of the protected branches"
@@ -1115,10 +1084,9 @@ show_help () {
 }
 
 show_change_version_help() {
-    simple_log "change_version command changes the project's (or parent's, if -p flag is set) version"
+    simple_log "change_version command changes the project's version"
     simple_log "Usage:"
     simple_log "    -h                            Display this help message."
-    simple_log "    -p                            Optional: change parent version instead of project version."
     simple_log "    -v <version name>             Optional: specify which version to use. Version is computed otherwise."
     simple_log "    -m <commit prefix>            Optional: specify a commit message prefix (e.g. JIRA / github ticket number) to prepend to commit messages. Empty otherwise."
 }
@@ -1319,9 +1287,6 @@ case "$subcommand" in
                     show_change_version_help
                     exit 0
                 ;;
-                p)
-                    targetParent=true
-                ;;
                 v)
                     version=$OPTARG
                 ;;
@@ -1338,7 +1303,7 @@ case "$subcommand" in
         done
         shift $((OPTIND - 1))
 
-        cmd="change_version ${version:-compute} ${targetParent:-off} ${jira:-}"
+        cmd="change_version ${version:-compute} ${jira:-}"
     ;;
     script)
         shift
