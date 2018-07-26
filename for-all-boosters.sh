@@ -193,6 +193,7 @@ get_latest_tag() {
     fi
 }
 
+# Retrieves the latest productized tag for the specified Spring Boot version
 get_latest_prod_tag() {
     local -r sbVersion=${1?"get_latest_prod_tag <Spring Boot version for which to get the latest tag>"}
     local -r gitDir=${2:-.}
@@ -201,7 +202,7 @@ get_latest_prod_tag() {
 
 get_next_prod_tag() {
     local -r sbVersion=${1?"get_next_prod_tag <Spring Boot version for which to compute the next tag>"}
-    local -r latestTag=$(git tag -l "${sbVersion}*-redhat" | sort --version-sort --reverse | head -n1)
+    local -r latestTag=$(get_latest_prod_tag ${sbVersion})
     if [[ -z "${latestTag}" ]]; then
         # if we don't have a tag for this specific SB version, then generate it
         echo "${sbVersion}-1-redhat"
