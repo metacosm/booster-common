@@ -11,6 +11,9 @@ GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 MAGENTA='\033[0;35m'
 
+# return value for function that can't return a result
+UNDEFINED='__undefined__'
+
 simple_log () {
     echo -e "${BLUE}${1}${NC}"
 }
@@ -189,7 +192,7 @@ get_latest_tag() {
     if [  $? -eq 0  ]; then
         echo ${latestTag}
     else
-        echo "Not tagged yet"
+        return ${UNDEFINED}
     fi
 }
 
