@@ -535,26 +535,30 @@ release() {
     local snapshot=${components[3]}
 
     # check that booster version is greater than latest tag
-    local -r latestTag=$(get_latest_tag)
-    local -r tagSBVersion=$(parse_version ${latestTag} sb)
-    local error=0
-    # first check SB version
-    version_compare ${tagSBVersion} ${sbVersion}
-    case $? in
-        1)
-            error=1
-        ;;
-        0)
-        # if SB versions are equal, check sub-version
-            local -r tagVersion=${BASH_REMATCH[2]}
-            if ((tagVersion >= versionInt)); then
+    local latestTag=$(get_latest_tag)
+    if [ "${latestTag}" != $UNDEFINED ]; then
+        local -r tagSBVersion=$(parse_version ${latestTag} sb)
+        local error=0
+        # first check SB version
+        version_compare ${tagSBVersion} ${sbVersion}
+        case $? in
+            1)
                 error=1
-            fi
-        ;;
-    esac
-    if ((error == 1)); then
-        log_failed "Booster version '${YELLOW}${currentVersion}${RED}' is older than latest released version '${YELLOW}${latestTag}${RED}'"
-        return 1
+            ;;
+            0)
+            # if SB versions are equal, check sub-version
+                local -r tagVersion=${BASH_REMATCH[2]}
+                if ((tagVersion >= versionInt)); then
+                    error=1
+                fi
+            ;;
+        esac
+        if ((error == 1)); then
+            log_failed "Booster version '${YELLOW}${currentVersion}${RED}' is older than latest released version '${YELLOW}${latestTag}${RED}'"
+            return 1
+        fi
+    else
+        log "Booster has never been released! Creating first release."
     fi
 
 
