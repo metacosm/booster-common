@@ -72,6 +72,9 @@ declare -a processed=( )
 # boosters which maven project is validated
 declare -a validated=( )
 
+# production BOM version
+declare _prodBOMVersion
+
 maven_settings() {
     if [[ -z "${MAVEN_SETTINGS}" ]]; then
       echo ""
@@ -186,6 +189,24 @@ get_latest_tag() {
         echo ${latestTag}
     else
         echo "Not tagged yet"
+    fi
+}
+
+get_latest_prod_tag() {
+    local -r sbVersion=${1?"get_latest_prod_tag <Spring Boot version for which to get the latest tag>"}
+    local -r gitDir=${2:-.}
+    echo "$(git -C ${gitDir} tag -l "${sbVersion}*-redhat" | sort --version-sort --reverse | head -n1)"
+}
+
+get_next_prod_tag() {
+    local -r sbVersion=${1?"get_next_prod_tag <Spring Boot version for which to compute the next tag>"}
+    local -r latestTag=$(git tag -l "${sbVersion}*-redhat" | sort --version-sort --reverse | head -n1)
+    if [[ -z "${latestTag}" ]]; then
+        # if we don't have a tag for this specific SB version, then generate it
+        echo "${sbVersion}-1-redhat"
+    else
+        local -r version=$(parse_version ${latestTag} 'own')
+        echo "${sbVersion}-$((version +1))-redhat"
     fi
 }
 
@@ -530,6 +551,8 @@ release() {
 
     local -r currentVersion=$(evaluate_mvn_expr 'project.version')
 
+    local -r pncBuildQualifier=${1:-CR1}
+
     if [[ "${currentVersion}" != *-SNAPSHOT ]]; then
         log_ignored "Cannot release a non-snapshot version"
         return 1
@@ -634,11 +657,76 @@ release() {
 
     change_version ${nextVersion}
 
+    prod_tag ${sbVersion} ${pncBuildQualifier}
+
     # switch pushing back on and push
     PUSH='on'
     push_to_remote "${remote}" "--tags"
+}
 
+get_prod_BOM_version() {
+    local -r sbVersion=${1?"Usage prod_tag <spring boot version to release>"}
+    local -r pncBuildQualifier=${2:-CR1}
 
+    if [ -z "${_prodBOMVersion}" ]; then
+        _prodBOMVersion=$(curl -s http://rcm-guest.app.eng.bos.redhat.com/rcm-guest/staging/rhoar/spring-boot/spring-boot-${sbVersion}.${pncBuildQualifier}/extras/repository-artifact-list.txt | grep spring-boot-bom | cut -d: -f3)
+    fi
+    echo ${_prodBOMVersion}
+}
+
+prod_tag() {
+    local -r sbVersion=${1?"Usage prod_tag <spring boot version to release>"}
+    local -r pncBuildQualifier=${2:-CR1}
+
+    # fail if we're not on master branch
+    local -r branch=$(git rev-parse --abbrev-ref HEAD)
+    if [ "${branch}" != master ]; then
+        log_failed "Cannot create prod tag if not on master branch"
+        return 1
+    fi
+
+    ## create prod tag
+    # compute tag name
+    local -r nextProdTag=$(get_next_prod_tag "${sbVersion}")
+    # create ephemeral branch to anchor tag
+    local -r ephemeralBranch="${nextProdTag}-branch"
+    git checkout -b "${ephemeralBranch}" >/dev/null 2>/dev/null
+    log "Switched to ${YELLOW}${ephemeralBranch}${BLUE} branch"
+    # update project version
+    mvn $(maven_settings) versions:set -DnewVersion=${nextProdTag} > /dev/null
+    find . -name "*.versionsBackup" -delete
+    commit_if_changed "Update booster to version ${nextProdTag}"
+
+    # update templates with proper version
+    if [ ${#templates[@]} != 0 ]; then
+        for file in ${templates[@]}
+        do
+            replace_template_placeholders ${file} ${nextProdTag}
+        done
+        if ! commit_if_changed "Replaced templates placeholders: BOOSTER_VERSION -> ${nextProdTag}"; then
+            # if no changes were made it means that templates don't contain tokens and should be fixed
+            log_ignored "Couldn't replace tokens in templates"
+            return 1
+        fi
+    fi
+
+    # update the pom to use the proper prod BOM version
+    # retrieve the prod BOM version: requires being connected to VPN
+    local -r prodBOMVersion=$(get_prod_BOM_version ${sbVersion} ${pncBuildQualifier})
+    set_maven_property "spring-boot-bom.version" ${prodBOMVersion}
+    commit_if_changed "Update BOM to version ${prodBOMVersion}"
+
+    # update the Spring Boot version property (which might be redundant if we're just releasing a new version of the booster)
+    local -r sbReleaseVersion="${sbVersion}.RELEASE"
+    set_maven_property "spring-boot.version" ${sbReleaseVersion}
+    commit_if_changed "Update Spring Boot to version ${sbReleaseVersion}"
+
+    log "Creating tag ${YELLOW}${nextProdTag}"
+    git tag -a ${nextProdTag} -m "Releasing ${nextProdTag}" > /dev/null
+
+    # switch back to master and delete ephemeral branch
+    git checkout ${branch} >/dev/null 2>/dev/null
+    git branch -D "${ephemeralBranch}"
 }
 
 do_revert() {
@@ -762,9 +850,13 @@ run_smoke_tests() {
     fi
 }
 
+get_catalog_dir() {
+    echo "${WORK_DIR}/launcher-booster-catalog"
+}
+
 prepare_catalog() {
     # clone launcher-catalog in temp dir if it doesn't already exist
-    local -r catalogDir="${WORK_DIR}/launcher-booster-catalog"
+    local -r catalogDir=$(get_catalog_dir)
     local -r officialBranchName="official"
     if [[ ! -d  ${catalogDir} ]]; then
         log "Preparing launcher-booster-catalog temporary clone, checking out ${YELLOW}official${BLUE} branch. Only done once." 1>&2
@@ -788,21 +880,29 @@ get_sb_version_file() {
 }
 
 catalog() {
+    local -r newSBVersion=${1?"Usage catalog <Spring Boot version associated with this update>"}
+    _catalog ${newSBVersion} "master"
+    _catalog ${newSBVersion} "redhat"
+}
+
+_catalog() {
+    local -r newSBVersion=${1?"Usage catalog <Spring Boot version associated with this update>"}
+    local -r branch=${2:-$BRANCH}
     declare -Ar catalog_branch_mapping=( ["master"]="current-community" ["redhat"]="current-redhat" ["osio"]="current-osio" )
     declare -Ar catalog_booster_mapping=( ["http"]="rest-http" ["http-secured"]="rest-http-secured" )
 
     local -r simpleName=$(simple_name)
     # get the catalog project
-    local -r catalogDir=$(prepare_catalog)
+    local -r catalogDir=$(get_catalog_dir)
     if [ $? -ne 0 ]; then
         log_failed "Unable to retrieve launcher-booster-catalog"
         return 1
     fi
 
     # get the YAML file for the booster / branch combination
-    local -r catalogVersion=${catalog_branch_mapping[${BRANCH}]}
+    local -r catalogVersion=${catalog_branch_mapping[${branch}]}
     if [[ ! -n ${catalogVersion} ]]; then
-        log_ignored "No mapping exist for branch ${YELLOW}${BRANCH}"
+        log_ignored "No mapping exist for branch ${YELLOW}${branch}"
         return 1
     fi
     local catalogMission=${catalog_booster_mapping[${simpleName}]}
@@ -817,15 +917,15 @@ catalog() {
         return 1
     fi
 
-    local -r newVersion=$(get_latest_tag "${BOOSTERS_DIR}/${BOOSTER}")
-
-    # record new SB version
-    local -r newSBVersion=$(parse_version ${newVersion} sb)
-    local -r sbVersionFile=$(get_sb_version_file)
-    if [[ ! -f ${sbVersionFile} ]]; then
-        log "Recording new Spring Boot version ${YELLOW}${newSBVersion}${BLUE}. Only done once."
-        echo "${newSBVersion}" > "${sbVersionFile}"
-    fi
+    local -r newVersion
+    case ${branch} in
+        redhat)
+            newVersion==$(get_latest_prod_tag ${newSBVersion} "${BOOSTERS_DIR}/${BOOSTER}")
+        ;;
+        *)
+            newVersion==$(get_latest_tag "${BOOSTERS_DIR}/${BOOSTER}")
+        ;;
+    esac
 
     # update metadata.yaml if we haven't already done it
     local -r metadataYAML=${catalogDir}"/metadata.yaml"
@@ -850,7 +950,7 @@ catalog() {
 }
 
 open_catalog_pr() {
-    local -r catalogDir=$(prepare_catalog)
+    local -r catalogDir=$(get_catalog_dir)
     pushd ${catalogDir} > /dev/null
     local -r sbVersion=$(cat "$(get_sb_version_file)")
     local -r branchName="update-to-${sbVersion}"
@@ -892,6 +992,7 @@ run_cmd() {
 }
 
 revert_release() {
+    #TODO need to remove created prod tag
     # release process creates 4 commits that we need to revert
     git revert --no-commit HEAD~4..
     local -r previousSHA=$(git rev-list HEAD~5..HEAD~4)
@@ -1059,7 +1160,7 @@ if [ $# -eq 0 ]; then
     show_help
 fi
 
-readonly default_branches=("master" "redhat")
+readonly default_branches=("master")
 branches=("${default_branches[@]}")
 
 readonly default_remote=upstream
@@ -1104,7 +1205,7 @@ while getopts ":hdnfspq:b:r:m:x:l:" opt; do
             echo
         ;;
         b)
-            IFS=',' read -r -a branches <<< "$OPTARG"
+            IFS=',' read -a branches <<< "$OPTARG"
             echo -e "${YELLOW}== Will use '${BLUE}$OPTARG${YELLOW}' branch(es) instead of the default ${BLUE}'$(IFS=,; echo "${default_branches[*]}")${YELLOW}' ==${NC}"
             echo
         ;;
@@ -1164,6 +1265,7 @@ shift $((OPTIND - 1))
 
 subcommand=$1
 cmd=""
+declare preCmd
 declare postCmd
 case "$subcommand" in
     release)
@@ -1172,10 +1274,17 @@ case "$subcommand" in
             exit 1
         fi
         cmd="release"
+        branches=( "master" )
+        echo -e "${YELLOW}== Release only works on the '${BLUE}master${YELLOW}' branch, disregarding any branch set by -b option ==${NC}"
+        echo
     ;;
     catalog)
+        preCmd="prepare_catalog"
         cmd="catalog"
         postCmd="open_catalog_pr"
+        branches=( "master" )
+        echo -e "${YELLOW}== Catalog only works on the '${BLUE}master${YELLOW}' branch, disregarding any branch set by -b option ==${NC}"
+        echo
     ;;
     create_branch)
         CREATE_BRANCH='on'
@@ -1330,6 +1439,15 @@ if [ ${#all_boosters_from_github[@]} == 0 ]; then
     exit 1
 fi
 pushd ${BOOSTERS_DIR} > /dev/null
+
+if [ -n "${preCmd}" ]; then
+    simple_log "Executing pre-boosters processing command '${YELLOW}${preCmd}${BLUE}'"
+    if ! ${preCmd}; then
+        simple_log "Couldn't run ${YELLOW}${preCmd}"
+        echo
+    fi
+fi
+
 
 for booster_line in ${all_boosters_from_github[@]}
 do
