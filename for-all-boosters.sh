@@ -845,10 +845,6 @@ prepare_catalog() {
     echo ${catalogDir}
 }
 
-get_sb_version_file() {
-    echo "${WORK_DIR}/spring-version.txt"
-}
-
 catalog() {
     local -r newSBVersion=${1?"Usage catalog <Spring Boot version associated with this update>"}
     _catalog ${newSBVersion} "master"
@@ -887,13 +883,13 @@ _catalog() {
         return 1
     fi
 
-    local -r newVersion
+    local newVersion
     case ${branch} in
         redhat)
-            newVersion==$(get_latest_prod_tag ${newSBVersion} "${BOOSTERS_DIR}/${BOOSTER}")
+            newVersion=$(get_latest_prod_tag ${newSBVersion} "${BOOSTERS_DIR}/${BOOSTER}")
         ;;
         *)
-            newVersion==$(get_latest_tag "${BOOSTERS_DIR}/${BOOSTER}")
+            newVersion=$(get_latest_tag "${BOOSTERS_DIR}/${BOOSTER}")
         ;;
     esac
 
@@ -905,7 +901,7 @@ _catalog() {
 
         version_compare ${newSBVersion} ${oldSBVersion}
         if (( $? == 1 )); then
-            local -r newSBVersions=$(yq '.runtimes[] | select(.id == "spring-boot") | .versions | map(if .id == "current-community" then .name="'"${newSBVersion}"'.RELEASE (Community)" elif .id == "current-redhat" then .name="'"${newSBVersion}"'.RELEASE (RHOAR)" elif .id == "current-osio" then .name="'"${newSBVersion}"'.RELEASE (OSIO)" else . end)' ${metadataYAML})
+            local -r newSBVersions=$(yq '.runtimes[] | select(.id == "spring-boot") | .versions | map(if .id == "current-community" then .name="'"${newSBVersion}"'.RELEASE (Community)" elif .id == "current-redhat" then .name="'"${newSBVersion}"'.RELEASE (RHOAR)" else . end)' ${metadataYAML})
             local -r newRuntimes=$(yq '.runtimes | map(if .id == "spring-boot" then .versions = '"${newSBVersions}"' else . end)' ${metadataYAML})
             yq -y '.runtimes='"${newRuntimes}" ${metadataYAML} > ${metadataYAML}.new
             rm ${metadataYAML}
@@ -920,9 +916,9 @@ _catalog() {
 }
 
 open_catalog_pr() {
+    local -r sbVersion=${1?"Must provide a Spring Boot version"}
     local -r catalogDir=$(get_catalog_dir)
     pushd ${catalogDir} > /dev/null
-    local -r sbVersion=$(cat "$(get_sb_version_file)")
     local -r branchName="update-to-${sbVersion}"
     git checkout -b "${branchName}" > /dev/null 2> /dev/null
     commit "Update Spring Boot to ${sbVersion}"
@@ -1096,7 +1092,7 @@ show_help () {
     simple_log "    script <path to script>       Run provided script."
     simple_log "    run_smoke_tests               Run the unit tests locally."
     simple_log "    set_maven_property <property name> <property value>           Set a Maven property. Works whether the property exists or not (even if the properties section does not exist). Commits the changes by default. Use ${YELLOW}-v${BLUE} to run a verification build after the property is updated."
-    simple_log "    catalog                       Creates a pull-request to update the launcher-booster-catalog project with the latest booster versions."
+    simple_log "    catalog <Spring Boot version> Creates a pull-request to update the launcher-booster-catalog project with the latest booster versions corresponding to the specified Spring Boot version."
     echo
 }
 
@@ -1264,8 +1260,9 @@ case "$subcommand" in
     ;;
     catalog)
         preCmd="prepare_catalog"
-        cmd="catalog"
-        postCmd="open_catalog_pr"
+        shift
+        cmd="catalog ${1}"
+        postCmd="open_catalog_pr ${1}"
         branches=( "master" )
         echo -e "${YELLOW}== Catalog only works on the '${BLUE}master${YELLOW}' branch, disregarding any branch set by -b option ==${NC}"
         echo
