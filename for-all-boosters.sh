@@ -969,18 +969,24 @@ revert_release() {
 
         # delete tag
         local -r tag=$(get_latest_tag)
-        answer=$(confirm "delete ${tag} locally and on remote")
-        if [ "${answer}" == Y ]; then
-            if [[ "$PUSH" == on ]]; then
-                git push --delete ${remote} ${tag}
-            fi
-            git tag -d ${tag}
-        else
-            log "Tag deletion aborted"
-        fi
+        delete_tag ${tag}
     else
         git revert --abort
         log "Revert aborted"
+    fi
+}
+
+# Deletes the specified tag both locally and remotely (if push is activated)
+delete_tag() {
+    local -r tag=${1?"Usage: delete_tag <tag name>"}
+    local answer=$(confirm "delete ${tag} locally and on remote")
+    if [ "${answer}" == Y ]; then
+        if [[ "$PUSH" == on ]]; then
+            git push --delete ${remote} ${tag}
+        fi
+        git tag -d ${tag}
+    else
+        log "Tag deletion aborted"
     fi
 }
 
