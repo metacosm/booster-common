@@ -962,25 +962,35 @@ run_cmd() {
 }
 
 revert_release() {
-    #TODO need to remove created prod tag
-    # release process creates 4 commits that we need to revert
-    git revert --no-commit HEAD~4..
-    local -r previousSHA=$(git rev-list HEAD~5..HEAD~4)
-    local -r previousMsg=$(git log -1 --format="%h: %s" ${previousSHA})
-    log "About to revert state to commit -> ${previousMsg}"
+    # first check we have a tag
+    local tag=$(get_latest_tag)
+    if [ "${tag}" != $UNDEFINED ]; then
 
-    # ask confirmation before reverting
-    local answer=$(confirm "revert to before last release")
-    if [ "${answer}" == Y ]; then
-        commit "Revert to ${previousMsg}"
-        push_to_remote
+        # release process creates 4 commits that we need to revert
+        git revert --no-commit HEAD~4..
+        local -r previousSHA=$(git rev-list HEAD~5..HEAD~4)
+        local -r previousMsg=$(git log -1 --format="%h: %s" ${previousSHA})
+        log "About to revert state to commit -> ${previousMsg}"
 
-        # delete tag
-        local -r tag=$(get_latest_tag)
-        delete_tag ${tag}
+        # ask confirmation before reverting
+        local answer=$(confirm "revert to before last release")
+        if [ "${answer}" == Y ]; then
+            commit "Revert to ${previousMsg}"
+            push_to_remote
+
+            # delete tag
+            delete_tag ${tag}
+
+            # get SB version from tag and then delete the associated latest prod tag
+            local -r sbVersion=$(parse_version ${tag} sb)
+            tag=$(get_latest_prod_tag ${sbVersion})
+            delete_tag ${tag}
+        else
+            git revert --abort
+            log "Revert aborted"
+        fi
     else
-        git revert --abort
-        log "Revert aborted"
+        log_failed "Booster hasn't been tagged: no release to revert!"
     fi
 }
 
