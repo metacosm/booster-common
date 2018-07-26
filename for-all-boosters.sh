@@ -829,7 +829,7 @@ prepare_catalog() {
     local -r catalogDir=$(get_catalog_dir)
     local -r officialBranchName="official"
     if [[ ! -d  ${catalogDir} ]]; then
-        log "Preparing launcher-booster-catalog temporary clone, checking out ${YELLOW}official${BLUE} branch. Only done once." 1>&2
+        simple_log "Preparing launcher-booster-catalog temporary clone, checking out ${YELLOW}official${BLUE} branch. Only done once." 1>&2
         if ! git clone -b ${officialBranchName} git@github.com:snowdrop/launcher-booster-catalog.git ${catalogDir} 1>&2 2> /dev/null; then
             simple_log "Could not clone launcher-booster-catalog"
             return 1
