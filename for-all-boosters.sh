@@ -239,8 +239,8 @@ verify_maven_project_setup() {
     fi
 }
 
-# Changes the version of the current booster to the specified one or computes it. If changes occurred, commit and push to remote.
-# Usage: change_version <new version | 'compute'> <JIRA issue number to prefix to commit message>
+# Changes the version of the current booster to the specified one or computes a new version based on the current one. If changes occurred, commit and push to remote.
+# Usage: change_version <new version>
 change_version() {
     # The first thing we do is make sure the project's dependencies are valid
     # This is done because if it were not,
@@ -251,13 +251,6 @@ change_version() {
     verify_maven_project_setup
 
     local newVersion=${1:-compute}
-    local jira
-    if [ -n "${2}" ]; then
-        jira=${2}": "
-    else
-        jira=""
-    fi
-
     local -r expr="project.version"
 
     # if provided version is "compute" then compute the new version :)
@@ -268,7 +261,7 @@ change_version() {
     local -r currentVersion=$(evaluate_mvn_expr ${expr})
     if mvn $(maven_settings) versions:set -DnewVersion=${newVersion} > /dev/null; then
         # Only attempt committing if we have changes otherwise the script will exit
-        if commit_if_changed ${jira}"Update version to ${newVersion}"; then
+        if commit_if_changed "Update version to ${newVersion}"; then
             push_to_remote
         else
             log_ignored "Version was already at ${YELLOW}${newVersion}"
@@ -1088,7 +1081,6 @@ show_change_version_help() {
     simple_log "Usage:"
     simple_log "    -h                            Display this help message."
     simple_log "    -v <version name>             Optional: specify which version to use. Version is computed otherwise."
-    simple_log "    -m <commit prefix>            Optional: specify a commit message prefix (e.g. JIRA / github ticket number) to prepend to commit messages. Empty otherwise."
 }
 
 show_cmd_help() {
@@ -1281,7 +1273,7 @@ case "$subcommand" in
         # Needed in order to "reset" the options processing for the subcommand
         OPTIND=2
         # Process options of subcommand
-        while getopts ":hpv:m:" opt2; do
+        while getopts ":hpv:" opt2; do
             case ${opt2} in
                 h)
                     show_change_version_help
@@ -1289,9 +1281,6 @@ case "$subcommand" in
                 ;;
                 v)
                     version=$OPTARG
-                ;;
-                m)
-                    jira=$OPTARG
                 ;;
                 \?)
                     error "Invalid change_version option: -$OPTARG" "show_change_version_help" 1>&2
@@ -1303,7 +1292,7 @@ case "$subcommand" in
         done
         shift $((OPTIND - 1))
 
-        cmd="change_version ${version:-compute} ${jira:-}"
+        cmd="change_version ${version:-compute}"
     ;;
     script)
         shift
