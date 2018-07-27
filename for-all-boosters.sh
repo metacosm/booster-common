@@ -1259,7 +1259,8 @@ case "$subcommand" in
             log_failed "The dry-run option is not supported for the release command"
             exit 1
         fi
-        cmd="release"
+        shift
+        cmd="release ${1}"
         branches=( "master" )
         echo -e "${YELLOW}== Release only works on the '${BLUE}master${YELLOW}' branch, disregarding any branch set by -b option ==${NC}"
         echo
