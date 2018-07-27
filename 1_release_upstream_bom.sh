@@ -7,10 +7,7 @@ set -e
 # Defining some colors for output
 RED='\033[0;31m'
 NC='\033[0m' # No Color
-YELLOW='\033[0;33m'
-GREEN='\033[0;32m'
 BLUE='\033[0;34m'
-MAGENTA='\033[0;35m'
 
 simple_log() {
     echo -e "${BLUE}${1}${NC}"

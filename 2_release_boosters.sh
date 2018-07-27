@@ -2,19 +2,12 @@
 set -e
 
 # Defining some colors for output
-RED='\033[0;31m'
 NC='\033[0m' # No Color
-YELLOW='\033[0;33m'
-GREEN='\033[0;32m'
 BLUE='\033[0;34m'
-MAGENTA='\033[0;35m'
 
 simple_log() {
     echo -e "${BLUE}${1}${NC}"
 }
-
-# get the directory of the script
-CMD_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null && pwd)"
 
 # create a temporary directory WORK_DIR to be removed at the exit of the script
 # see: https://stackoverflow.com/questions/4632028/how-to-create-a-temporary-directory
