@@ -156,7 +156,7 @@ private String effectiveSpringBootVersion(String springBootVersion) {
 }
 
 private String simpleSpringBootVersion(String springBootVersion) {
-    def officialVersion = springBootVersion =~ /([0-9]+.[0-9]+.[0-9]+).[A-Z0-9]+/
+    final officialVersion = springBootVersion =~ /([0-9]+.[0-9]+.[0-9]+).[A-Z0-9]+/
     if (springBootVersion ==~ /[0-9]+.[0-9]+.[0-9]+/) {
         return springBootVersion
     } else if (officialVersion.matches()) {
