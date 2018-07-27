@@ -519,7 +519,8 @@ release() {
 
     local -r currentVersion=$(evaluate_mvn_expr 'project.version')
 
-    local -r pncBuildQualifier=${1:-CR1}
+    local -r releaseSBVersion=${1?"Usage: release <Spring Boot version associated with the release (for validation purposes)>"}
+    local -r pncBuildQualifier=${2:-CR1}
 
     if [[ "${currentVersion}" != *-SNAPSHOT ]]; then
         log_ignored "Cannot release a non-snapshot version"
@@ -529,6 +530,11 @@ release() {
     local -a components
     eval $(parse_version ${currentVersion})
     local -r sbVersion=${components[0]}
+
+    if [ "${releaseSBVersion}" != "${sbVersion}" ]; then
+        log_failed "Booster uses Spring Boot version ${sbVersion} while release specified Spring Boot version ${releaseSBVersion}"
+    fi
+
     local -r versionInt=${components[1]}
     local -r newVersionInt=$((versionInt + 1))
     local qualifier=${components[2]}
