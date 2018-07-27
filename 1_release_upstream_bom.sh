@@ -52,7 +52,7 @@ declare -r sbVersion=${1?"Must provide a target Spring Boot version in the x.y.z
 if [[ ${sbVersion} =~ ([1-9].[0-9]).([0-9]+) ]]; then
     sbMajorVersion="${BASH_REMATCH[1]}"
     bomBranch="sb-${sbMajorVersion}.x"
-    nextBOMVersion="${sbMajorVersion}.$((${BASH_REMATCH[2]} + 1))-SNAPSHOT"
+    nextBOMVersion="${sbMajorVersion}.$((BASH_REMATCH[2] + 1))-SNAPSHOT"
 else
     error "Unsupported Spring Boot version: ${sbVersion}" 1>&2
 fi
@@ -68,6 +68,7 @@ pushd ${CMD_DIR}/src/
 groovy update-pom.groovy ${WORK_DIR}/spring-boot-bom/pom.xml ${sbVersion} "hibernate.version=,hibernate-validator.version="
 popd
 mvn install
+# TODO: Update BOM README notably to update Spring Boot version
 
 # release the BOM
 releaseVersion="${sbVersion}.Final"

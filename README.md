@@ -1,5 +1,18 @@
 # Scripts to process boosters
 
+## `1_release_upstream_bom.sh`
+
+A script that performs an upstream BOM release when a new Spring Boot version is released and updates the boosters accordingly.
+The script will automatically update the Spring Boot-defined dependencies in the BOM but it is still required to update manually
+any other dependencies such as Spring Cloud dependencies. It will also update the boosters to use the newly released Spring Boot
+and BOM and change their version according to the versioning scheme.
+
+## `2_release_boosters.sh`
+
+Releases the boosters once the productized BOM has been validated by QE, tagging both the community and productized versions. 
+The script will then use these newly released versions to generate a launcher-catalog pull request updating the boosters version
+and Spring Boot runtime.
+
 ## `for-all-boosters`
 
 A script that operates on all boosters under the `snowdrop` organization that have the `booster` topic attached to them 
@@ -20,6 +33,7 @@ when all the boosters are processed.
 * oc
 * jq
 * yq (see instructions to download [here](https://github.com/kislyuk/yq))
+* hub (https://github.com/github/hub)
 
 ### Examples
 
@@ -56,7 +70,7 @@ when all the boosters are processed.
 
   `./for-all-boosters.sh -f -b foo cmd -p "Made some change" "/home/scripts/adhoc.py"`
   
-  Due to the presense of the `-f` flag, before running the command the script will show a warning if local changes exist (to remove the warning add the `-n` flag)
+  Due to the presence of the `-f` flag, before running the command the script will show a warning if local changes exist (to remove the warning add the `-n` flag)
   Any changes that the `adhoc.py` script makes to the booster files will automatically be committed using the message specified in `-p` and pushed to the `foo` branch (which needs to exist)   
 
 * This command will execute the `fmp_deploy` function found in the script on the `redhat` branch of the `crud` booster
