@@ -629,7 +629,10 @@ release() {
 
     change_version ${nextVersion}
 
-    prod_tag ${sbVersion} ${pncBuildQualifier}
+    if ! prod_tag ${sbVersion} ${pncBuildQualifier}; then
+      log_failed "Couldn't create the productized tag"
+      return 1
+    fi
 
     # switch pushing back on and push
     PUSH='on'
@@ -641,7 +644,12 @@ get_prod_BOM_version() {
     local -r pncBuildQualifier=${2:-CR1}
 
     if [ -z "${_prodBOMVersion}" ]; then
-        _prodBOMVersion=$(curl -s http://rcm-guest.app.eng.bos.redhat.com/rcm-guest/staging/rhoar/spring-boot/spring-boot-${sbVersion}.${pncBuildQualifier}/extras/repository-artifact-list.txt | grep spring-boot-bom | cut -d: -f3)
+        _prodBOMVersion=$(curl -sS http://rcm-guest.app.eng.bos.redhat.com/rcm-guest/staging/rhoar/spring-boot/spring-boot-${sbVersion}.${pncBuildQualifier}/extras/repository-artifact-list.txt | grep spring-boot-bom)
+        if [ $? -ne 0 ]; then
+           log_failed "Couldn't retrieve the prod BOM version. Are you connected to the VPN?" 1>&2
+           echo "${UNDEFINED}"
+        fi
+        _prodBOMVersion=$(echo "${_prodBOMVersion}" | cut -d: -f3)
     fi
     echo ${_prodBOMVersion}
 }
@@ -683,6 +691,9 @@ prod_tag() {
     # update the pom to use the proper prod BOM version
     # retrieve the prod BOM version: requires being connected to VPN
     local -r prodBOMVersion=$(get_prod_BOM_version ${sbVersion} ${pncBuildQualifier})
+    if [ "${prodBOMVersion}" == "${UNDEFINED}" ]; then
+        return 1
+    fi
     set_maven_property "spring-boot-bom.version" ${prodBOMVersion}
     commit_if_changed "Update BOM to version ${prodBOMVersion}"
 
