@@ -1092,7 +1092,7 @@ show_help () {
     simple_log "    -p                            Perform booster local setup."
     simple_log "    -r                            The name of the git remote to use for the boosters, for example upstream or origin. The default value is ${YELLOW}${default_remote}${BLUE}."
     simple_log "    -s                            Skip the test execution."
-    simple_log "    release                       Release the boosters."
+    simple_log "    release prod_milestone      Release the boosters (creates community and prod tags, updates the versions). prod_milestone should be the prod milestone to be releases (like ER2 or CR1)"
     simple_log "    change_version <args>         Change the project version. Run with ${YELLOW}-h${BLUE} to see help."
     simple_log "    run_integration_tests <deployment type>  Run the integration tests on an OpenShift cluster. Requires to be logged in to the required cluster before executing. Deployment Type can be either ${YELLOW}fmp_deploy${BLUE} (default) or ${YELLOW}s2i_deploy${BLUE}."
     simple_log "    create_branch                 Create a branch specified by the ${YELLOW}-b${BLUE} option. Those branches cannot be any of the protected branches. The new branch is always created off of master"
@@ -1264,7 +1264,14 @@ case "$subcommand" in
             log_failed "The dry-run option is not supported for the release command"
             exit 1
         fi
-        cmd="release"
+
+        shift
+        if [ -n "$1" ]; then
+            cmd="release ${1}"
+        else
+            error "Must provide a prod_milestone to use (like ER2 or CR1) for the prod release of the boosters" 1>&2
+        fi
+
         branches=( "master" )
         echo -e "${YELLOW}== Release only works on the '${BLUE}master${YELLOW}' branch, disregarding any branch set by -b option ==${NC}"
         echo
