@@ -185,10 +185,17 @@ compute_new_version() {
     echo ${new_version}
 }
 
+# Retrieves the latest tag
+# Usage: get_latest_tag <on|off to retrieve prod (on) or upstream (off) tag> <git directory path>
 get_latest_tag() {
-    local -r gitDir=${1:-.}
+    local -r prod=${1:-off}
+    local -r gitDir=${2:-.}
+    local regex='^[^v].*[^-redhat]$'
+    if [[ "$prod" == on ]]; then
+        regex='^[^v].*redhat'
+    fi
     local latestTag
-    latestTag=$(git -C ${gitDir} describe --tags --abbrev=0 2> /dev/null)
+    latestTag=$(git tag | grep "${regex}" | sort --version-sort --reverse | head -n1 2> /dev/null)
     if [  $? -eq 0  ]; then
         echo ${latestTag}
     else
@@ -196,16 +203,9 @@ get_latest_tag() {
     fi
 }
 
-# Retrieves the latest productized tag for the specified Spring Boot version
-get_latest_prod_tag() {
-    local -r sbVersion=${1?"get_latest_prod_tag <Spring Boot version for which to get the latest tag>"}
-    local -r gitDir=${2:-.}
-    echo "$(git -C ${gitDir} tag -l "${sbVersion}*-redhat" | sort --version-sort --reverse | head -n1)"
-}
-
 get_next_prod_tag() {
     local -r sbVersion=${1?"get_next_prod_tag <Spring Boot version for which to compute the next tag>"}
-    local -r latestTag=$(get_latest_prod_tag ${sbVersion})
+    local -r latestTag=$(get_latest_tag on)
     if [[ -z "${latestTag}" ]]; then
         # if we don't have a tag for this specific SB version, then generate it
         echo "${sbVersion}-1-redhat"
@@ -289,7 +289,7 @@ setup_booster_locally () {
       pushd ${booster_name} > /dev/null
     else
       pushd ${booster_name} > /dev/null
-      git fetch -q ${remote}
+      git fetch --tags -q ${remote}
       BRANCH=$(git rev-parse --abbrev-ref HEAD)
       revert "log_without_branch" true
       unset BRANCH
@@ -897,10 +897,10 @@ _catalog() {
     local newVersion
     case ${branch} in
         redhat)
-            newVersion=$(get_latest_prod_tag ${newSBVersion} "${BOOSTERS_DIR}/${BOOSTER}")
+            newVersion=$(get_latest_tag on "${BOOSTERS_DIR}/${BOOSTER}")
         ;;
         *)
-            newVersion=$(get_latest_tag "${BOOSTERS_DIR}/${BOOSTER}")
+            newVersion=$(get_latest_tag off "${BOOSTERS_DIR}/${BOOSTER}")
         ;;
     esac
 
@@ -988,9 +988,7 @@ revert_release() {
             # delete tag
             delete_tag ${tag}
 
-            # get SB version from tag and then delete the associated latest prod tag
-            local -r sbVersion=$(parse_version ${tag} sb)
-            tag=$(get_latest_prod_tag ${sbVersion})
+            tag=$(get_latest_tag on)
             delete_tag ${tag}
         else
             git revert --abort
@@ -1484,7 +1482,7 @@ do
               fi
 
               if [ "$bypassUpdate" == off ]; then
-                  git fetch -q "${remote}" > /dev/null
+                  git fetch --tags -q "${remote}" > /dev/null
 
                   updateBranch=${BRANCH}
                   # when the command is create_branch, we need to checkout master in order to create the new branch
